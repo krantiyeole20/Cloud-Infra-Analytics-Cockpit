@@ -18,14 +18,14 @@ import urllib.request
 import urllib.error
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").rstrip("/")
-TIMEOUT = 30  # seconds per request
+TIMEOUT = 60  # seconds per request (refresh can take 60s)
 
 PASS = "\033[92m✓\033[0m"
 FAIL = "\033[91m✗\033[0m"
 WARN = "\033[93m⚠\033[0m"
 
 
-def request(method: str, path: str, expect_status: int = 200) -> tuple[int, dict]:
+def request(method: str, path: str) -> tuple[int, object]:
     url = f"{BASE_URL}{path}"
     req = urllib.request.Request(url, method=method)
     req.add_header("Content-Type", "application/json")
@@ -46,23 +46,23 @@ def request(method: str, path: str, expect_status: int = 200) -> tuple[int, dict
 
 results = []
 
-def check(label: str, status: int, body: dict, expect: int = 200, required_keys: list = None):
+def check(label: str, status: int, body: object, expect: int = 200, required_keys: list = None):
     ok = status == expect
     missing = []
-    if ok and required_keys:
+    if ok and required_keys and isinstance(body, dict):
         missing = [k for k in required_keys if k not in body]
         ok = len(missing) == 0
     icon = PASS if ok else FAIL
     detail = f"status={status}" + (f" missing_keys={missing}" if missing else "")
-    print(f"  {icon}  {label:<45} {detail}")
+    print(f"  {icon}  {label:<48} {detail}")
     results.append(ok)
 
-# ── Health ────────────────────────────────────────────────────────────────────
-print(f"\n{'='*60}")
+print(f"\n{'='*62}")
 print(f"Cloud VM Intelligence Cockpit — Backend Smoke Tests")
 print(f"Target: {BASE_URL}")
-print(f"{'='*60}\n")
+print(f"{'='*62}\n")
 
+# ── Health ────────────────────────────────────────────────────────────────────
 print("[ Health ]")
 s, b = request("GET", "/health")
 check("/health", s, b, required_keys=["status", "rows_loaded", "memory_mb"])
@@ -77,7 +77,7 @@ print("\n[ Workload ]")
 s, b = request("GET", "/workload/heatmap")
 check("/workload/heatmap", s, b, required_keys=["rows", "cols", "matrix"])
 s, b = request("GET", "/workload/distribution")
-check("/workload/distribution (list)", s, b)
+check("/workload/distribution", s, b)
 
 # ── Performance ──────────────────────────────────────────────────────────────
 print("\n[ Performance ]")
@@ -97,7 +97,7 @@ check("/vms (top by compute_value)", s, b, required_keys=["cohorts", "sort_by"])
 s, b = request("GET", "/vms?sort=asc")
 check("/vms?sort=asc", s, b, required_keys=["cohorts"])
 s, b = request("GET", "/vms/summary")
-check("/vms/summary", s, b)
+check("/vms/summary (list)", s, b)
 s, b = request("GET", "/vms/sample?task_type=io&limit=10")
 check("/vms/sample (filtered)", s, b)
 
@@ -109,10 +109,11 @@ s, b = request("GET", "/anomalies?task_type=compute")
 check("/anomalies (task_type=compute)", s, b, required_keys=["fleet_alert"])
 s, b = request("GET", "/anomalies/roc")
 if s == 503:
-    print(f"  {WARN}  /anomalies/roc                                    status=503 (model not yet trained — expected)")
+    print(f"  {WARN}  /anomalies/roc                                     status=503 (model not yet trained)")
     results.append(True)
 else:
     check("/anomalies/roc", s, b, required_keys=["fpr", "tpr", "auc"])
+# Test 404 for unknown vm_id
 s, b = request("GET", "/anomalies/nonexistent-vm-id-12345/shap")
 check("/anomalies/{vm_id}/shap (not found — expect 404)", s, b, expect=404)
 
@@ -120,13 +121,13 @@ check("/anomalies/{vm_id}/shap (not found — expect 404)", s, b, expect=404)
 print("\n[ Forecast ]")
 s, b = request("GET", "/forecast/24h")
 if s == 503:
-    print(f"  {WARN}  /forecast/24h                                     status=503 (model training — may be slow)")
+    print(f"  {WARN}  /forecast/24h                                      status=503 (first-time training)")
     results.append(True)
 else:
     check("/forecast/24h", s, b, required_keys=["horizon_hours", "series"])
 s, b = request("GET", "/forecast/7day")
 if s == 503:
-    print(f"  {WARN}  /forecast/7day                                    status=503 (model training — may be slow)")
+    print(f"  {WARN}  /forecast/7day                                     status=503 (first-time training)")
     results.append(True)
 else:
     check("/forecast/7day", s, b, required_keys=["horizon_days", "series", "alert"])
@@ -135,7 +136,7 @@ else:
 print("\n[ Topology ]")
 s, b = request("GET", "/topology")
 check("/topology", s, b, required_keys=["nodes", "edges", "layout"])
-if s == 200:
+if s == 200 and isinstance(b, dict):
     n_nodes = len(b.get("nodes", []))
     icon = PASS if n_nodes == 3 else WARN
     print(f"  {icon}  /topology node count = {n_nodes} (expect 3 — io/network/compute)")
@@ -153,7 +154,7 @@ check("/explorer/query (mutation blocked — expect 400)", s, b, expect=400)
 
 # ── Refresh ───────────────────────────────────────────────────────────────────
 print("\n[ Refresh — POST ]")
-print("  Running POST /refresh (may take 10-60s — retrains models)...")
+print("  Running POST /refresh (may take 10–60s — retrains models)…")
 t0 = time.perf_counter()
 s, b = request("POST", "/refresh")
 elapsed = time.perf_counter() - t0
@@ -163,13 +164,12 @@ check(f"/refresh ({elapsed:.1f}s)", s, b, required_keys=["rows_added", "cache_in
 passed = sum(results)
 total = len(results)
 pct = 100 * passed // total if total else 0
-print(f"\n{'='*60}")
+print(f"\n{'='*62}")
 print(f"Results: {passed}/{total} passed ({pct}%)")
 if passed == total:
     print(f"{PASS} All tests passed!")
 else:
-    failed = total - passed
-    print(f"{FAIL} {failed} test(s) failed — see above.")
-print(f"{'='*60}\n")
+    print(f"{FAIL} {total - passed} test(s) failed — see above.")
+print(f"{'='*62}\n")
 
 sys.exit(0 if passed == total else 1)

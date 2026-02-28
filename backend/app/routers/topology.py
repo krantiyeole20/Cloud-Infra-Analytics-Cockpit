@@ -1,21 +1,13 @@
 # backend/app/routers/topology.py
-# GET /topology — VM network graph for D3 TopologyGraph chart.
-# HLD.md Section 6.
-#
-# Phase 0 decision: topology_agg = task_type_cluster_nodes (Option C)
-# Rationale: unique vm_ids = 1,799,362 >> 10,000 threshold.
-# Only 3 cluster nodes rendered (io, network, compute).
-# Each node aggregates its cohort's resource metrics for the tooltip.
-
 import logging
 from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 from app import cache, database
 from app.config import TTL_WORKLOAD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Logged at module load time for audit trail
 logger.info(
     "topology_agg=task_type_cluster_nodes (Option C) — "
     "3 nodes only, unique vm_ids 1.8M >> 10k threshold"
@@ -24,19 +16,6 @@ logger.info(
 
 @router.get("")
 async def get_topology(request: Request):
-    """
-    Return the VM topology graph as nodes + edges for D3 force simulation.
-
-    Phase 0 decision: 3 task_type cluster nodes.
-    Each node contains aggregated resource metrics for tooltip display.
-    Edges represent shared hardware pool relationship (all cohorts share
-    the same physical infrastructure).
-
-    Response shape (HLD.md Section 6 /topology):
-        nodes  — list of {id, label, task_type, stats, vm_count}
-        edges  — list of {source, target, weight}
-        layout — 'force' (D3 force simulation directive)
-    """
     CACHE_KEY = "topology:graph"
     try:
         cached = await cache.get(CACHE_KEY)
@@ -61,41 +40,46 @@ async def get_topology(request: Request):
                     2
                 )                                     AS waste_pct
             FROM telemetry
+            WHERE task_type IS NOT NULL
             GROUP BY task_type
             ORDER BY task_type
         """
         df = database.query(sql)
+        # Drop any NaN task_type rows (data artifact from NaN in source)
+        df = df.dropna(subset=["task_type"])
+        # Keep only valid string task_types
+        df = df[df["task_type"].apply(lambda x: isinstance(x, str))]
+
+        task_types = df["task_type"].tolist()
+        total_vms = df["vm_count"].sum()
 
         nodes = []
-        task_types = df["task_type"].tolist()
-
         for _, row in df.iterrows():
-            tt = row["task_type"]
+            tt = str(row["task_type"])
             nodes.append({
                 "id": tt,
                 "label": tt.upper(),
                 "task_type": tt,
                 "vm_count": int(row["vm_count"]),
                 "stats": {
-                    "avg_cpu": float(row["avg_cpu"]),
-                    "avg_memory": float(row["avg_memory"]),
-                    "avg_power": float(row["avg_power"]),
-                    "avg_efficiency": float(row["avg_efficiency"]),
-                    "avg_compute_value": float(row["avg_compute_value"]),
-                    "waste_pct": float(row["waste_pct"]),
+                    "avg_cpu": float(row["avg_cpu"] or 0),
+                    "avg_memory": float(row["avg_memory"] or 0),
+                    "avg_power": float(row["avg_power"] or 0),
+                    "avg_efficiency": float(row["avg_efficiency"] or 0),
+                    "avg_compute_value": float(row["avg_compute_value"] or 0),
+                    "waste_pct": float(row["waste_pct"] or 0),
                 },
             })
 
-        # Edges: fully-connected mesh between 3 nodes (shared infra pool)
+        # Edges: fully-connected mesh between task_type nodes
         edges = []
         for i in range(len(task_types)):
             for j in range(i + 1, len(task_types)):
-                # Weight = harmonic mean of their vm_counts (normalized)
-                total = df.iloc[i]["vm_count"] + df.iloc[j]["vm_count"]
+                weight = (df.iloc[i]["vm_count"] + df.iloc[j]["vm_count"]) / total_vms if total_vms else 0
                 edges.append({
                     "source": task_types[i],
                     "target": task_types[j],
-                    "weight": round(total / df["vm_count"].sum(), 4),
+                    "weight": round(float(weight), 4),
                 })
 
         result = {
@@ -109,4 +93,4 @@ async def get_topology(request: Request):
 
     except Exception as e:
         logger.error(f"GET /topology failed: {e}")
-        return {"error": "Topology query failed", "detail": str(e)}, 500
+        return JSONResponse({"error": "Topology query failed", "detail": str(e)}, status_code=500)

@@ -49,18 +49,9 @@ async def get_kpis(request: Request):
         """
         row = database.query(sql).iloc[0]
 
-        # Behavioral anomalies: check if model ran and anomaly scores exist
+        # Behavioral anomalies: column doesn't exist in DuckDB until scoring runs.
+        # Count from anomaly model results via app state instead.
         behavioral_anomalies = 0
-        try:
-            anom_sql = """
-                SELECT COUNT(*) AS n
-                FROM telemetry
-                WHERE behavioral_anomaly_score > 0.7
-            """
-            behavioral_anomalies = int(database.query(anom_sql).iloc[0]["n"])
-        except Exception:
-            # behavioral_anomaly_score column only exists after scoring — graceful default
-            pass
 
         result = {
             "avg_energy_efficiency": float(row["avg_energy_efficiency"]),

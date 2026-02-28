@@ -10,6 +10,7 @@ import logging
 import re
 from typing import Optional
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
 from app import database
 
 logger = logging.getLogger(__name__)
@@ -114,22 +115,24 @@ async def run_explorer_query(
     # Resolve SQL
     if template:
         if template not in QUERY_TEMPLATES:
-            return {
-                "error": f"Unknown template '{template}'",
-                "available": list(QUERY_TEMPLATES.keys()),
-            }, 400
+            return JSONResponse(
+                {"error": f"Unknown template '{template}'", "available": list(QUERY_TEMPLATES.keys())},
+                status_code=400,
+            )
         query_sql = QUERY_TEMPLATES[template].strip()
     elif sql:
         if not _is_safe_sql(sql):
-            return {
-                "error": "Only SELECT queries are permitted. Mutation keywords are blocked."
-            }, 400
+            return JSONResponse(
+                {"error": "Only SELECT queries are permitted. Mutation keywords are blocked."},
+                status_code=400,
+            )
         query_sql = sql.strip()
     else:
-        return {
-            "error": "Provide either 'template' or 'sql' query parameter.",
-            "available_templates": list(QUERY_TEMPLATES.keys()),
-        }, 400
+        return JSONResponse(
+            {"error": "Provide either 'template' or 'sql' query parameter.",
+             "available_templates": list(QUERY_TEMPLATES.keys())},
+            status_code=400,
+        )
 
     try:
         # Wrap in a limit subquery to cap results

@@ -1,9 +1,7 @@
 # backend/app/routers/workload.py
-# GET /workload/heatmap — task_type × resource metric heatmap data.
-# HLD.md Section 6.
-
 import logging
 from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 from app import cache, database
 from app.config import TTL_WORKLOAD
 
@@ -13,17 +11,6 @@ router = APIRouter()
 
 @router.get("/heatmap")
 async def get_workload_heatmap(request: Request):
-    """
-    Return a matrix of average resource metrics per task_type × task_priority.
-
-    Used by the WorkloadHeatmap chart. Cached 30s.
-
-    Response shape:
-        rows     — list of task_type labels
-        cols     — list of metric names
-        matrix   — list of lists (rows × cols) of average values
-        meta     — {task_type: {task_priority: record_count}}
-    """
     CACHE_KEY = "workload:heatmap"
     try:
         cached = await cache.get(CACHE_KEY)
@@ -46,29 +33,30 @@ async def get_workload_heatmap(request: Request):
                 ROUND(AVG(throughput), 2)             AS avg_throughput,
                 COUNT(*)                              AS record_count
             FROM telemetry
+            WHERE task_type IS NOT NULL
             GROUP BY task_type, task_priority
             ORDER BY task_type, task_priority
         """
         df = database.query(sql)
+        # Drop any rows where task_type is None/NaN (data artifact)
+        df = df.dropna(subset=["task_type"])
 
         METRIC_COLS = [
             "avg_cpu", "avg_memory", "avg_network", "avg_power",
             "avg_efficiency", "avg_compute_value", "avg_throughput",
         ]
-        task_types = sorted(df["task_type"].unique().tolist())
-        task_priorities = sorted(df["task_priority"].unique().tolist())
+        task_types = sorted([t for t in df["task_type"].unique().tolist() if t is not None])
 
-        # Build row-per-task_type matrix summed across priorities (simple mean),
-        # plus a breakdown metadata dict
         matrix: list[list[float]] = []
         meta: dict = {}
         for tt in task_types:
             subset = df[df["task_type"] == tt]
-            row_vals = subset[METRIC_COLS].mean().round(4).tolist()
+            row_vals = subset[METRIC_COLS].mean().round(4).fillna(0).tolist()
             matrix.append(row_vals)
             meta[tt] = {
                 row["task_priority"]: int(row["record_count"])
                 for _, row in subset.iterrows()
+                if row["task_priority"] is not None
             }
 
         result = {
@@ -82,15 +70,11 @@ async def get_workload_heatmap(request: Request):
 
     except Exception as e:
         logger.error(f"GET /workload/heatmap failed: {e}")
-        return {"error": "Workload heatmap failed", "detail": str(e)}, 500
+        return JSONResponse({"error": "Workload heatmap failed", "detail": str(e)}, status_code=500)
 
 
 @router.get("/distribution")
 async def get_workload_distribution(request: Request):
-    """
-    Return task_type and task_priority distribution counts.
-    Used for sidebar summary and pie/donut charts.
-    """
     try:
         sql = """
             SELECT
@@ -100,6 +84,7 @@ async def get_workload_distribution(request: Request):
                 COUNT(*) AS count,
                 ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct
             FROM telemetry
+            WHERE task_type IS NOT NULL AND task_priority IS NOT NULL AND task_status IS NOT NULL
             GROUP BY task_type, task_priority, task_status
             ORDER BY task_type, task_priority, task_status
         """
@@ -107,4 +92,4 @@ async def get_workload_distribution(request: Request):
         return df.to_dict(orient="records")
     except Exception as e:
         logger.error(f"GET /workload/distribution failed: {e}")
-        return {"error": "Workload distribution failed", "detail": str(e)}, 500
+        return JSONResponse({"error": "Workload distribution failed", "detail": str(e)}, status_code=500)

@@ -1,43 +1,33 @@
 # backend/app/routers/performance.py
-# GET /performance/timeseries and /performance/surface3d
-# HLD.md Section 6.
-
 import logging
 from typing import Optional
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
 from app import cache, database
 from app.config import TTL_WORKLOAD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+SAFE_METRICS = {
+    "energy_efficiency", "cpu_usage", "memory_usage", "network_traffic",
+    "power_consumption", "compute_value", "throughput",
+}
+SAFE_BUCKETS_TS = {"hour", "day", "week"}
+SAFE_BUCKETS_3D = {"hour", "day"}
+
 
 @router.get("/timeseries")
 async def get_performance_timeseries(
     request: Request,
-    task_type: Optional[str] = Query(None, description="Filter by task_type: io, network, compute"),
-    metric: str = Query("energy_efficiency", description="Metric column to aggregate"),
-    bucket: str = Query("hour", description="Time bucket: hour, day, week"),
+    task_type: Optional[str] = Query(None),
+    metric: str = Query("energy_efficiency"),
+    bucket: str = Query("day"),
 ):
-    """
-    Hourly/daily/weekly aggregations of a metric per task_type.
-
-    Used by the MetricTimeSeries chart. Filterable by task_type.
-
-    Response shape:
-        metric, bucket, task_type (or null),
-        series: list of {timestamp, value, record_count}
-    """
-    SAFE_METRICS = {
-        "energy_efficiency", "cpu_usage", "memory_usage", "network_traffic",
-        "power_consumption", "compute_value", "throughput",
-    }
-    SAFE_BUCKETS = {"hour", "day", "week"}
-
     if metric not in SAFE_METRICS:
-        return {"error": f"metric must be one of {SAFE_METRICS}"}, 400
-    if bucket not in SAFE_BUCKETS:
-        return {"error": f"bucket must be one of {SAFE_BUCKETS}"}, 400
+        return JSONResponse({"error": f"metric must be one of {sorted(SAFE_METRICS)}"}, status_code=400)
+    if bucket not in SAFE_BUCKETS_TS:
+        return JSONResponse({"error": f"bucket must be one of {sorted(SAFE_BUCKETS_TS)}"}, status_code=400)
 
     cache_key = f"perf:ts:{task_type or 'all'}:{metric}:{bucket}"
     try:
@@ -64,42 +54,27 @@ async def get_performance_timeseries(
         series = [
             {
                 "timestamp": str(row["bucket_ts"]),
-                "value": float(row["value"]),
+                "value": float(row["value"]) if row["value"] is not None else 0.0,
                 "record_count": int(row["record_count"]),
             }
             for _, row in df.iterrows()
         ]
-        result = {
-            "metric": metric,
-            "bucket": bucket,
-            "task_type": task_type,
-            "series": series,
-        }
+        result = {"metric": metric, "bucket": bucket, "task_type": task_type, "series": series}
         await cache.set(cache_key, result, TTL_WORKLOAD)
         return result
 
     except Exception as e:
         logger.error(f"GET /performance/timeseries failed: {e}")
-        return {"error": "Time-series query failed", "detail": str(e)}, 500
+        return JSONResponse({"error": "Time-series query failed", "detail": str(e)}, status_code=500)
 
 
 @router.get("/surface3d")
 async def get_efficiency_surface3d(
     request: Request,
-    bucket: str = Query("day", description="Time bucket for x-axis: hour or day"),
+    bucket: str = Query("day"),
 ):
-    """
-    3D surface data: task_type (z) × time bucket (x) × energy_efficiency (y).
-
-    Used by the EfficiencySurface3D Plotly chart.
-
-    Response shape:
-        task_types — list of task_type labels
-        surfaces — list of {task_type, x (timestamps), y (efficiency values)}
-    """
-    SAFE_BUCKETS = {"hour", "day"}
-    if bucket not in SAFE_BUCKETS:
-        return {"error": "bucket must be 'hour' or 'day'"}, 400
+    if bucket not in SAFE_BUCKETS_3D:
+        return JSONResponse({"error": "bucket must be 'hour' or 'day'"}, status_code=400)
 
     cache_key = f"perf:surface3d:{bucket}"
     try:
@@ -117,12 +92,13 @@ async def get_efficiency_surface3d(
                 {group_by_ts}                         AS bucket_ts,
                 ROUND(AVG(energy_efficiency), 4)      AS avg_efficiency
             FROM telemetry
-            WHERE energy_efficiency IS NOT NULL
+            WHERE energy_efficiency IS NOT NULL AND task_type IS NOT NULL
             GROUP BY task_type, bucket_ts
             ORDER BY task_type, bucket_ts
         """
         df = database.query(sql)
-        task_types = sorted(df["task_type"].unique().tolist())
+        df = df.dropna(subset=["task_type"])
+        task_types = sorted([t for t in df["task_type"].unique().tolist() if t is not None])
 
         surfaces = []
         for tt in task_types:
@@ -130,7 +106,7 @@ async def get_efficiency_surface3d(
             surfaces.append({
                 "task_type": tt,
                 "x": [str(v) for v in subset["bucket_ts"].tolist()],
-                "y": [float(v) for v in subset["avg_efficiency"].tolist()],
+                "y": [float(v) if v is not None else 0.0 for v in subset["avg_efficiency"].tolist()],
             })
 
         result = {"task_types": task_types, "surfaces": surfaces, "bucket": bucket}
@@ -139,4 +115,4 @@ async def get_efficiency_surface3d(
 
     except Exception as e:
         logger.error(f"GET /performance/surface3d failed: {e}")
-        return {"error": "Surface3D query failed", "detail": str(e)}, 500
+        return JSONResponse({"error": "Surface3D query failed", "detail": str(e)}, status_code=500)
