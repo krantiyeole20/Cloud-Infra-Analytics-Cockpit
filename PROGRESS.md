@@ -39,6 +39,7 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - Phase 2 — ML Engine [2026-02-27]
 - Phase 3 — API Routers [2026-02-27]
 - Phase 4 — Frontend Scaffold and State [2026-02-27]
+- Phase 5 — Frontend Layout and Navigation [2026-02-27]
 
 ## Completed Features (flat list)
 - [x] Phase 0 / Data analysis and decision logging
@@ -77,6 +78,16 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - [x] Phase 4 / src/hooks/useRefresh.ts (refresh hook with double-click guard)
 - [x] Phase 4 / src/main.tsx + App.tsx (shell with fleet alert banner + KPI polling)
 - [x] Phase 4 / src/index.css (dark design tokens) + src/constants.ts (colors/labels)
+- [x] Phase 5 / src/index.css (full design system — glassmorphism, tokens, animations)
+- [x] Phase 5 / components/layout/TopBar.tsx (live KPI strip, refresh button, status dot)
+- [x] Phase 5 / components/layout/Sidebar.tsx (nav + task_type filter pills + footer stats)
+- [x] Phase 5 / components/layout/MainCanvas.tsx (view router)
+- [x] Phase 5 / components/views/OverviewView.tsx (KPI cards, topology, waste table)
+- [x] Phase 5 / components/views/WorkloadView.tsx (heat-colored matrix, cohort rankings)
+- [x] Phase 5 / components/views/AnomalyView.tsx (fleet banner, anomaly table, SHAP bars)
+- [x] Phase 5 / components/views/ForecastView.tsx (24h table, 7-day table, peak alert)
+- [x] Phase 5 / components/views/ExplorerView.tsx (template pills, SQL textarea, results)
+- [x] Phase 5 / App.tsx (rewired — real layout, fleet banner, bootstrap fetchOverview)
 
 ## Known Issues / Conflicts
 - **vm_id near-uniqueness**: `/vms` endpoint must aggregate by `(task_type, task_priority)` cohort, not raw `vm_id`. Logged as design decision — awaiting Phase 3 implementation.
@@ -84,13 +95,10 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - **Railway Starter required**: Free tier (512MB) is not viable for this dataset. Confirmed in `config.py` note and will be flagged in `railway.toml` in Phase 8.
 
 ## Current Phase
-Phase 5 — Frontend Layout and Navigation
+Phase 6 — Chart Components
 
 ## Remaining Features
-- [ ] Phase 5 / TopBar component
-- [ ] Phase 5 / Sidebar component
-- [ ] Phase 5 / MainCanvas and app shell
-- [ ] Phase 6 / MetricTimeSeries chart
+- [ ] Phase 6 / MetricTimeSeries (Recharts LineChart)
 - [ ] Phase 6 / WorkloadHeatmap chart
 - [ ] Phase 6 / EfficiencySurface3D chart
 - [ ] Phase 6 / ShapWaterfall chart
