@@ -1,89 +1,78 @@
-// src/components/views/WorkloadView.tsx
-import { useEffect } from 'react'
+// src/components/views/WorkloadView.tsx — Phase 6: WorkloadHeatmap + EfficiencySurface3D
+import { useEffect, useState } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
-
-const METRIC_LABELS: Record<string, string> = {
-    avg_cpu: 'CPU %', avg_memory: 'Memory %', avg_network: 'Network',
-    avg_power: 'Power (W)', avg_efficiency: 'Efficiency', avg_compute_value: 'Compute Value', avg_throughput: 'Throughput',
-}
-
-function HeatmapCell({ value, min, max, col }: { value: number; min: number; max: number; col: string }) {
-    const t = max === min ? 0 : (value - min) / (max - min)
-    const alpha = 0.1 + t * 0.6
-    const isEfficiency = col === 'avg_efficiency' || col === 'avg_compute_value'
-    const color = isEfficiency
-        ? `rgba(16,185,129,${alpha})`
-        : col === 'avg_power' ? `rgba(239,68,68,${alpha})` : `rgba(59,130,246,${alpha})`
-    return (
-        <td style={{ background: color, textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 12, padding: '8px 12px', color: 'var(--text-1)' }}>
-            {value.toFixed(col === 'avg_efficiency' || col === 'avg_compute_value' ? 3 : 1)}
-        </td>
-    )
-}
+import WorkloadHeatmap from '../charts/WorkloadHeatmap'
+import EfficiencySurface3D from '../charts/EfficiencySurface3D'
+import MetricTimeSeries from '../charts/MetricTimeSeries'
+import type { Surface3DResponse } from '../../types'
 
 export default function WorkloadView() {
     const heatmap = useDashboardStore((s) => s.heatmap)
-    const distribution = useDashboardStore((s) => s.distribution)
     const vms = useDashboardStore((s) => s.vms)
     const fetchHeatmap = useDashboardStore((s) => s.fetchHeatmap)
     const fetchDistribution = useDashboardStore((s) => s.fetchDistribution)
     const fetchVms = useDashboardStore((s) => s.fetchVms)
+    const fetchTimeSeries = useDashboardStore((s) => s.fetchTimeSeries)
+    const [surface3d, setSurface3d] = useState<Surface3DResponse | null>(null)
 
     useEffect(() => {
-        fetchHeatmap(); fetchDistribution(); fetchVms()
-    }, [fetchHeatmap, fetchDistribution, fetchVms])
-
-    const hm = heatmap.data
-
-    // Column min/max for heat scaling
-    const colRanges = hm
-        ? hm.cols.map((_, ci) => {
-            const vals = hm.matrix.map((r) => r[ci])
-            return { min: Math.min(...vals), max: Math.max(...vals) }
-        })
-        : []
+        fetchHeatmap()
+        fetchDistribution()
+        fetchVms()
+        fetchTimeSeries('cpu_usage', 'day')
+        // Fetch surface3d directly — no store slot, surface data is view-local
+        import('../../api/client').then(({ getSurface3D }) =>
+            getSurface3D('day').then(setSurface3d).catch(() => { })
+        )
+    }, [fetchHeatmap, fetchDistribution, fetchVms, fetchTimeSeries])
 
     return (
         <div className="view">
             <div className="view-header">
                 <h1 className="view-title">Workload Analysis</h1>
-                <p className="view-subtitle">Resource metric heatmap and VM cohort compute value rankings.</p>
+                <p className="view-subtitle">Resource heatmap, efficiency trends by task type, and compute value cohort rankings.</p>
             </div>
 
-            {/* Heatmap */}
-            <div className="chart-card" style={{ marginBottom: 20 }}>
+            {/* Heatmap + efficiency trends */}
+            <div className="chart-grid cols-2" style={{ marginBottom: 16 }}>
+                <div className="chart-card">
+                    <div className="chart-card-header">
+                        <div>
+                            <div className="chart-card-title">Resource Heatmap</div>
+                            <div className="chart-card-subtitle">task_type × metric — averaged across all priorities</div>
+                        </div>
+                    </div>
+                    {heatmap.data
+                        ? <WorkloadHeatmap data={heatmap.data} height={180} />
+                        : <div className="chart-placeholder">
+                            {heatmap.loading ? <span className="loading-pulse">Loading heatmap…</span> : 'No data'}
+                        </div>
+                    }
+                </div>
+
+                <div className="chart-card">
+                    <div className="chart-card-header">
+                        <div>
+                            <div className="chart-card-title">Efficiency Trends by Task Type</div>
+                            <div className="chart-card-subtitle">Daily avg — io / network / compute</div>
+                        </div>
+                    </div>
+                    {surface3d
+                        ? <EfficiencySurface3D data={surface3d} height={260} />
+                        : <div className="chart-placeholder"><span className="loading-pulse">Loading trends…</span></div>
+                    }
+                </div>
+            </div>
+
+            {/* CPU time-series */}
+            <div className="chart-card" style={{ marginBottom: 16 }}>
                 <div className="chart-card-header">
                     <div>
-                        <div className="chart-card-title">Resource Heatmap — task_type × metric</div>
-                        <div className="chart-card-subtitle">Averaged across all task priorities</div>
+                        <div className="chart-card-title">CPU Usage Over Time</div>
+                        <div className="chart-card-subtitle">Daily average across fleet</div>
                     </div>
                 </div>
-                {hm ? (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Task Type</th>
-                                    {hm.cols.map((c) => <th key={c}>{METRIC_LABELS[c] ?? c}</th>)}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {hm.rows.map((row, ri) => (
-                                    <tr key={row}>
-                                        <td><span className={`badge badge-${row}`}>{row.toUpperCase()}</span></td>
-                                        {hm.matrix[ri].map((val, ci) => (
-                                            <HeatmapCell key={ci} value={val} col={hm.cols[ci]} min={colRanges[ci]?.min ?? 0} max={colRanges[ci]?.max ?? 1} />
-                                        ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="chart-placeholder">
-                        {heatmap.loading ? <span className="loading-pulse">Loading heatmap…</span> : 'No data'}
-                    </div>
-                )}
+                <MetricTimeSeries metric="cpu_usage" bucket="day" height={200} />
             </div>
 
             {/* Cohort rankings */}

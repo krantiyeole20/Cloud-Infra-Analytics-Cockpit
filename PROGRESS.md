@@ -40,6 +40,7 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - Phase 3 — API Routers [2026-02-27]
 - Phase 4 — Frontend Scaffold and State [2026-02-27]
 - Phase 5 — Frontend Layout and Navigation [2026-02-27]
+- Phase 6 — Chart Components [2026-02-27]
 
 ## Completed Features (flat list)
 - [x] Phase 0 / Data analysis and decision logging
@@ -88,6 +89,17 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - [x] Phase 5 / components/views/ForecastView.tsx (24h table, 7-day table, peak alert)
 - [x] Phase 5 / components/views/ExplorerView.tsx (template pills, SQL textarea, results)
 - [x] Phase 5 / App.tsx (rewired — real layout, fleet banner, bootstrap fetchOverview)
+- [x] Phase 6 / charts/MetricTimeSeries.tsx (Recharts AreaChart, gradient fill, efficiency % format)
+- [x] Phase 6 / charts/ForecastChart.tsx (24h CI-band AreaChart + 7day amber+peak ReferenceLine)
+- [x] Phase 6 / charts/RocCurve.tsx (violet Recharts + diagonal reference + AUC badge)
+- [x] Phase 6 / charts/ShapWaterfall.tsx (horizontal BarChart, red=positive, green=negative impact)
+- [x] Phase 6 / charts/WorkloadHeatmap.tsx (pure SVG, 3-color-scheme per metric type)
+- [x] Phase 6 / charts/EfficiencySurface3D.tsx (Plotly 3D lines, lazy-loaded)
+- [x] Phase 6 / charts/TopologyGraph.tsx (D3 force-simulation, draggable, glow rings)
+- [x] Phase 6 / views/OverviewView.tsx wired (TimeSeries + TopologyGraph)
+- [x] Phase 6 / views/WorkloadView.tsx wired (Heatmap + Surface3D + TimeSeries)
+- [x] Phase 6 / views/AnomalyView.tsx wired (RocCurve + ShapWaterfall)
+- [x] Phase 6 / views/ForecastView.tsx wired (ForecastChart24h + ForecastChart7Day)
 
 ## Known Issues / Conflicts
 - **vm_id near-uniqueness**: `/vms` endpoint must aggregate by `(task_type, task_priority)` cohort, not raw `vm_id`. Logged as design decision — awaiting Phase 3 implementation.
@@ -95,16 +107,11 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - **Railway Starter required**: Free tier (512MB) is not viable for this dataset. Confirmed in `config.py` note and will be flagged in `railway.toml` in Phase 8.
 
 ## Current Phase
-Phase 6 — Chart Components
+Phase 7 — Deployment and Final Wiring
 
 ## Remaining Features
-- [ ] Phase 6 / MetricTimeSeries (Recharts LineChart)
-- [ ] Phase 6 / WorkloadHeatmap chart
-- [ ] Phase 6 / EfficiencySurface3D chart
-- [ ] Phase 6 / ShapWaterfall chart
-- [ ] Phase 6 / RocCurve chart
-- [ ] Phase 6 / TopologyGraph chart
-- [ ] Phase 6 / ForecastChart chart
+- [ ] Phase 7 / Render deployment + env vars
+- [ ] Phase 7 / Final smoke test + README update
 - [ ] Phase 7 / KpiCard and VmDetailCard
 - [ ] Phase 7 / Overview view
 - [ ] Phase 7 / Workload view
