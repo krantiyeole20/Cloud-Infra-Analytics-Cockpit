@@ -1,0 +1,2 @@
+# GPU Infra Cockpit
+A production-grade, real-time GPU data center monitoring dashboard that demonstrates infrastructure intelligence. The system ingests a static telemetry dataset, continuously enriches it with statistically faithful synthetic data on each user-triggered refresh, runs three independent ML insight models per server, and surfaces results through a cockpit-style React frontend backed by a FastAPI service layer.
