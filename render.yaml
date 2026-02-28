@@ -3,25 +3,24 @@
 # Place this file at the REPO ROOT so Render's Blueprint feature can discover it.
 #
 # IMPORTANT — Memory tier:
-#   The dataset loads ~500–800MB in-memory (float32 downcast applied).
+#   The dataset loads ~500-800MB in-memory (float32 downcast applied).
 #   Render Starter plan (2GB RAM) is required. Free tier (512MB) is NOT viable.
 #
 # To deploy:
-#   1. Connect this GitHub repo in the Render dashboard → "New Blueprint Instance"
+#   1. Connect this GitHub repo in the Render dashboard -> "New Blueprint Instance"
 #   2. Render will read this file and create the web service + Redis automatically.
-#   3. Set CORS_ORIGINS in the Render dashboard to your Vercel frontend URL.
+#   3. After deploy, set CORS_ORIGINS to your Vercel frontend URL in Render dashboard.
 #   4. Set VITE_API_BASE_URL in Vercel to this service's onrender.com URL.
 
 services:
   - type: web
     name: cloud-vm-cockpit-api
     runtime: python
-    plan: starter        # 2GB RAM — required for 2M-row in-memory DuckDB
+    plan: starter
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    autoDeploy: true     # auto-redeploy on every push to main
     envVars:
       - key: REDIS_URL
         fromService:
@@ -29,19 +28,13 @@ services:
           type: redis
           property: connectionString
       - key: CORS_ORIGINS
-        value: https://your-vercel-app.vercel.app   # replace with your Vercel URL
+        value: https://your-vercel-app.vercel.app
       - key: WASTE_POWER_THRESHOLD
         value: "375.14"
       - key: POWER_ALERT_KW
         value: "400000.0"
-      # Kaggle credentials — only needed if the CSV is downloaded at boot time
-      # (not required if backend/data/telemetry.csv is committed to the repo)
-      # - key: KAGGLE_USERNAME
-      #   sync: false
-      # - key: KAGGLE_KEY
-      #   sync: false
 
-databases:
-  - name: cloud-vm-cockpit-redis
-    type: redis
-    plan: free           # Redis free tier is sufficient for cache-only workload
+  - type: redis
+    name: cloud-vm-cockpit-redis
+    plan: free
+    maxmemoryPolicy: noeviction
