@@ -38,6 +38,7 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - Phase 1 — Project Scaffold and Data Foundation [2026-02-27]
 - Phase 2 — ML Engine [2026-02-27]
 - Phase 3 — API Routers [2026-02-27]
+- Phase 4 — Frontend Scaffold and State [2026-02-27]
 
 ## Completed Features (flat list)
 - [x] Phase 0 / Data analysis and decision logging
@@ -66,6 +67,16 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - [x] Phase 3 / routers/forecast.py (/24h + /7day, lazy forecast model training)
 - [x] Phase 3 / routers/topology.py (3 task_type cluster nodes + weighted edges)
 - [x] Phase 3 / routers/explorer.py (7 named templates + custom SELECT, mutation guard)
+- [x] Phase 4 / backend/requirements.txt (all pinned deps incl. kagglehub)
+- [x] Phase 4 / scripts/test_backend.py (stdlib smoke test — all endpoints)
+- [x] Phase 4 / frontend/package.json + vite.config.ts + tsconfig.json + index.html
+- [x] Phase 4 / src/types/index.ts (all API response interfaces)
+- [x] Phase 4 / src/api/client.ts (Axios typed wrappers for every endpoint)
+- [x] Phase 4 / src/store/dashboardStore.ts (Zustand, generic fetchSlice, bulk fetchOverview)
+- [x] Phase 4 / src/hooks/usePolling.ts (generic interval hook)
+- [x] Phase 4 / src/hooks/useRefresh.ts (refresh hook with double-click guard)
+- [x] Phase 4 / src/main.tsx + App.tsx (shell with fleet alert banner + KPI polling)
+- [x] Phase 4 / src/index.css (dark design tokens) + src/constants.ts (colors/labels)
 
 ## Known Issues / Conflicts
 - **vm_id near-uniqueness**: `/vms` endpoint must aggregate by `(task_type, task_priority)` cohort, not raw `vm_id`. Logged as design decision — awaiting Phase 3 implementation.
@@ -73,17 +84,12 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - **Railway Starter required**: Free tier (512MB) is not viable for this dataset. Confirmed in `config.py` note and will be flagged in `railway.toml` in Phase 8.
 
 ## Current Phase
-Phase 4 — Frontend Scaffold and State
+Phase 5 — Frontend Layout and Navigation
 
 ## Remaining Features
-- [ ] Phase 4 / React project init
-- [ ] Phase 4 / Type definitions
-- [ ] Phase 4 / API client layer
-- [ ] Phase 4 / Zustand store
-- [ ] Phase 4 / Polling hooks
-- [ ] Phase 5 / Top bar
-- [ ] Phase 5 / Sidebar
-- [ ] Phase 5 / Main canvas and app shell
+- [ ] Phase 5 / TopBar component
+- [ ] Phase 5 / Sidebar component
+- [ ] Phase 5 / MainCanvas and app shell
 - [ ] Phase 6 / MetricTimeSeries chart
 - [ ] Phase 6 / WorkloadHeatmap chart
 - [ ] Phase 6 / EfficiencySurface3D chart

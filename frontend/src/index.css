@@ -1,0 +1,73 @@
+/* src/index.css — global design system tokens */
+:root {
+  --bg-base: #0a0e1a;
+  --bg-surface: #111827;
+  --bg-surface-2: #1a2235;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --border: #1e293b;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* App shell */
+.app-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* Fleet alert banner */
+.alert-banner {
+  background: linear-gradient(90deg, #7c2d12, #b45309);
+  color: #fef3c7;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  z-index: 100;
+}
+
+/* Phase 4 placeholder */
+.layout-placeholder { display: flex; flex-direction: column; flex: 1; padding: 20px; gap: 12px; }
+
+.status-bar {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+}
+
+.logo { font-size: 15px; font-weight: 600; color: var(--accent-cyan); }
+.loading-indicator { color: var(--accent-blue); animation: pulse 1.5s ease-in-out infinite; }
+.kpi-summary { color: var(--text-secondary); font-size: 13px; margin-left: auto; }
+
+.content-placeholder {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; color: var(--text-muted);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
