@@ -3,16 +3,7 @@ import { useEffect } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import MetricTimeSeries from '../charts/MetricTimeSeries'
 import TopologyGraph from '../charts/TopologyGraph'
-
-function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-    return (
-        <div className="kpi-card">
-            <div className="kpi-card-label">{label}</div>
-            <div className={`kpi-card-value ${color ?? ''}`}>{value}</div>
-            {sub && <div className="kpi-card-sub">{sub}</div>}
-        </div>
-    )
-}
+import KpiCard from '../cards/KpiCard'
 
 export default function OverviewView() {
     const kpis = useDashboardStore((s) => s.kpis)

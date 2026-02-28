@@ -124,6 +124,7 @@ export interface BehavioralAnomalyRow {
     cpu_usage: number
     memory_usage: number
     power_consumption: number
+    compute_value: number
 }
 
 export interface FleetAlert {

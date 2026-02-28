@@ -1,0 +1,21 @@
+# backend/railway.toml
+# Railway deployment configuration for the Cloud VM Intelligence Cockpit backend.
+#
+# IMPORTANT — Memory tier required:
+#   Dataset (2M rows) loads ~500–800MB in-memory after float32 downcast.
+#   Railway Starter plan (2GB RAM) is the minimum viable tier.
+#   Free tier (512MB) is NOT viable — startup will OOM.
+#
+# Environment variables to set in the Railway project dashboard:
+#   REDIS_URL     — provided automatically if you add a Redis service
+#   CORS_ORIGINS  — set to your Vercel frontend URL, e.g. https://my-app.vercel.app
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

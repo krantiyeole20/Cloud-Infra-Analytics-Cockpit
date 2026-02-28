@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import { ForecastChart24h, ForecastChart7Day } from '../charts/ForecastChart'
+import KpiCard from '../cards/KpiCard'
 
 export default function ForecastView() {
     const f24 = useDashboardStore((s) => s.forecast24h)
@@ -79,6 +80,14 @@ export default function ForecastView() {
                             <div className="chart-card-header">
                                 <div className="chart-card-title">24h Detail — Next 12 Hours</div>
                             </div>
+                            <div style={{ marginBottom: 16, padding: '0 16px' }}>
+                                <KpiCard
+                                    label="Mean Absolute Error (MAE)"
+                                    value={d24.mae ? d24.mae.toFixed(1) : '—'}
+                                    unit="kW"
+                                    color="blue"
+                                />
+                            </div>
                             <table className="data-table">
                                 <thead><tr><th>Time</th><th>Predicted kW</th><th>CI Lower</th><th>CI Upper</th></tr></thead>
                                 <tbody>
@@ -100,16 +109,16 @@ export default function ForecastView() {
                                 <div className="chart-card-title">7-Day Summary</div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                                <div className="kpi-card" style={{ padding: 12 }}>
-                                    <div className="kpi-card-label">Peak Day</div>
-                                    <div className="kpi-card-value" style={{ fontSize: 18 }}>{d7.peak_day}</div>
-                                </div>
-                                <div className="kpi-card" style={{ padding: 12 }}>
-                                    <div className="kpi-card-label">Peak Power</div>
-                                    <div className={`kpi-card-value ${d7.alert ? 'red' : 'amber'}`} style={{ fontSize: 18 }}>
-                                        {d7.peak_predicted_kw.toLocaleString(undefined, { maximumFractionDigits: 0 })} kW
-                                    </div>
-                                </div>
+                                <KpiCard
+                                    label="Peak Day"
+                                    value={d7.peak_day}
+                                />
+                                <KpiCard
+                                    label="Peak Power"
+                                    value={d7.peak_predicted_kw.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    unit="kW"
+                                    color={d7.alert ? "red" : "amber"}
+                                />
                             </div>
                             <table className="data-table">
                                 <thead><tr><th>Date</th><th>Predicted kW</th><th>95% CI</th></tr></thead>

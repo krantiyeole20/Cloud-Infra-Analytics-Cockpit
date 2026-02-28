@@ -11,6 +11,7 @@
 import logging
 from typing import Optional
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
 from app import database
 from app.ml.compute_value import (
     get_top_cohorts_by_compute_value,
@@ -61,7 +62,7 @@ async def get_vms(
         }
     except Exception as e:
         logger.error(f"GET /vms failed: {e}")
-        return {"error": "VM cohort query failed", "detail": str(e)}, 500
+        return JSONResponse(status_code=500, content={"error": "VM cohort query failed", "detail": str(e)})
 
 
 @router.get("/summary")
@@ -78,8 +79,10 @@ async def get_vms_summary(
         return df.to_dict(orient="records")
     except Exception as e:
         logger.error(f"GET /vms/summary failed (task_type={task_type!r}): {e}")
-        return {"error": "VM summary failed", "detail": str(e)}, 500
+        return JSONResponse(status_code=500, content={"error": "VM summary failed", "detail": str(e)})
 
+
+import math
 
 @router.get("/sample")
 async def get_vm_sample(
@@ -106,10 +109,15 @@ async def get_vm_sample(
                 energy_efficiency, compute_value, is_wasting_energy
             FROM telemetry
             {where}
-            USING SAMPLE {int(limit)}
+            LIMIT {int(limit)}
         """
         df = database.query(sql)
-        return df.to_dict(orient="records")
+        records = df.to_dict(orient="records")
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
     except Exception as e:
         logger.error(f"GET /vms/sample failed: {e}")
-        return {"error": "VM sample query failed", "detail": str(e)}, 500
+        return JSONResponse(status_code=500, content={"error": "VM sample query failed", "detail": str(e)})

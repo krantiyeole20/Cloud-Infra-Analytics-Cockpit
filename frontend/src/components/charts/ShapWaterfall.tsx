@@ -41,8 +41,8 @@ export default function ShapWaterfall({ data, height = 240 }: Props) {
                         tick={{ fontSize: 10, fill: 'var(--text-2)' }} tickLine={false} axisLine={false} />
                     <Tooltip
                         contentStyle={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v: number, _: string, entry: { payload: { value: number } }) => [
-                            `SHAP: ${(v > 0 ? '+' : '')}${v.toFixed(4)} | Feature val: ${entry.payload.value?.toFixed?.(3) ?? v}`,
+                        formatter={(v: number, _: string, entry: any) => [
+                            `SHAP: ${(v > 0 ? '+' : '')}${v.toFixed(4)} | Feature val: ${entry.payload?.value?.toFixed?.(3) ?? v}`,
                             'Impact'
                         ]}
                     />

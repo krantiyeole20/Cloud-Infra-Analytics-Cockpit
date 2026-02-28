@@ -1,0 +1,155 @@
+# .github/workflows/ci.yml
+# Cloud VM Intelligence Cockpit — CI/CD Pipeline
+#
+# Triggers:
+#   - Every push to main
+#   - Every pull request targeting main
+#
+# Jobs:
+#   1. backend-check  — syntax validation for all Python modules
+#   2. frontend-check — TypeScript typecheck + production build
+#
+# Deployment (auto-triggered by git push — no extra steps needed):
+#   - Frontend → Vercel  (auto-deploys on push to main via Git integration)
+#   - Backend  → Render  (auto-deploys on push to main via Git integration)
+#
+# Set these GitHub secrets if you want manual deploy triggers:
+#   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID  (optional)
+#   RENDER_DEPLOY_HOOK_URL                            (optional)
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Backend Python syntax and import checks
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  backend-check:
+    name: Backend — Syntax Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate core app modules (syntax)
+        run: |
+          python -m py_compile \
+            app/__init__.py \
+            app/main.py \
+            app/config.py \
+            app/pipeline.py \
+            app/database.py \
+            app/cache.py \
+            app/synthetic.py
+
+      - name: Validate ML modules (syntax)
+        run: |
+          python -m py_compile \
+            app/ml/__init__.py \
+            app/ml/efficiency.py \
+            app/ml/anomaly.py \
+            app/ml/completion.py \
+            app/ml/compute_value.py \
+            app/ml/forecast.py \
+            app/ml/explainability.py
+
+      - name: Validate router modules (syntax)
+        run: |
+          python -m py_compile \
+            app/routers/__init__.py \
+            app/routers/kpis.py \
+            app/routers/workload.py \
+            app/routers/performance.py \
+            app/routers/vms.py \
+            app/routers/anomalies.py \
+            app/routers/forecast.py \
+            app/routers/topology.py \
+            app/routers/explorer.py \
+            app/routers/refresh.py
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Frontend TypeScript typecheck + production build
+  # ─────────────────────────────────────────────────────────────────────────────
+  frontend-check:
+    name: Frontend — Typecheck & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+        env:
+          # Placeholder — real value is set in the Vercel project dashboard
+          VITE_API_BASE_URL: https://placeholder.onrender.com
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Notify on success (main branch only)
+  # ─────────────────────────────────────────────────────────────────────────────
+  notify-deploy:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [backend-check, frontend-check]
+    if: github.ref == 'refs/heads/main' && success()
+
+    steps:
+      - name: Print deployment summary
+        run: |
+          echo "✅ All checks passed on main branch."
+          echo ""
+          echo "Deployment targets (auto-triggered via Git integration):"
+          echo "  Frontend → Vercel   (set Root Directory = frontend in Vercel dashboard)"
+          echo "  Backend  → Render   (render.yaml at repo root defines service)"
+          echo ""
+          echo "Environment variables to configure:"
+          echo "  Vercel project:  VITE_API_BASE_URL = <your Render service URL>"
+          echo "  Render service:  REDIS_URL         = <Redis connection string>"
+          echo "                   CORS_ORIGINS      = <your Vercel app URL>"

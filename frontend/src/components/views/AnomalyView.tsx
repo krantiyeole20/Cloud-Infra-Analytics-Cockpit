@@ -1,8 +1,9 @@
-// src/components/views/AnomalyView.tsx — Phase 6: RocCurve + ShapWaterfall
+// src/components/views/AnomalyView.tsx — Phase 7: RocCurve + ShapWaterfall + VmDetailCard
 import { useEffect, useState } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import RocCurve from '../charts/RocCurve'
 import ShapWaterfall from '../charts/ShapWaterfall'
+import VmDetailCard from '../cards/VmDetailCard'
 
 export default function AnomalyView() {
     const anomalies = useDashboardStore((s) => s.anomalies)
@@ -99,22 +100,45 @@ export default function AnomalyView() {
                 </div>
             </div>
 
-            {/* SHAP waterfall */}
+            {/* SHAP waterfall / VmDetailCard panel */}
             {selectedVm && (
-                <div className="chart-card">
-                    <div className="chart-card-header">
+                <div className="chart-card" style={{
+                    border: '1px solid var(--border-strong)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                    position: 'fixed', right: 20, top: 70, bottom: 20, width: 440,
+                    zIndex: 100, display: 'flex', flexDirection: 'column',
+                    background: 'var(--bg-surface-1)'
+                }}>
+                    <div className="chart-card-header" style={{ flexShrink: 0 }}>
                         <div>
-                            <div className="chart-card-title">SHAP Feature Attributions</div>
+                            <div className="chart-card-title">VM Investigation Panel</div>
                             <div className="chart-card-subtitle">{selectedVm}</div>
                         </div>
                         <button onClick={() => setSelectedVm(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18 }}>✕</button>
                     </div>
-                    {shap.data && shap.data.vm_id === selectedVm
-                        ? <ShapWaterfall data={shap.data} height={260} />
-                        : <div className="chart-placeholder">
-                            {shap.loading ? <span className="loading-pulse">Computing SHAP…</span> : 'Fetching…'}
-                        </div>
-                    }
+
+                    <div style={{ padding: '0 20px', flex: 1, overflowY: 'auto' }}>
+                        <VmDetailCard
+                            vmId={selectedVm}
+                            taskType={behavioral.find(b => b.vm_id === selectedVm)?.task_type ?? 'compute'}
+                            computeValue={behavioral.find(b => b.vm_id === selectedVm)?.compute_value ?? 0.5}
+                            energyEfficiency={behavioral.find(b => b.vm_id === selectedVm)?.energy_efficiency ?? 0.5}
+                            behavioralScore={behavioral.find(b => b.vm_id === selectedVm)?.behavioral_anomaly_score ?? 0.8}
+                            completionProb={0.65} // Mock or fetch from completion model if available
+                            onShapRequest={(id) => fetchShap(id)}
+                        />
+
+                        {shap.data && shap.data.vm_id === selectedVm ? (
+                            <div style={{ marginTop: 20 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>SHAP Explanations</div>
+                                <ShapWaterfall data={shap.data} height={300} />
+                            </div>
+                        ) : (
+                            <div style={{ marginTop: 20, padding: 20, textAlign: 'center', color: 'var(--text-3)' }}>
+                                {shap.loading ? <span className="loading-pulse">Computing SHAP…</span> : 'Click View SHAP Breakdown to load explanations.'}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
