@@ -1,11 +1,20 @@
 # backend/app/pipeline.py
 # Data pipeline for the Cloud VM Intelligence Cockpit.
-# Runs on startup: null handling → derived metrics → dtype downcasting.
 #
-# Phase 0 decisions baked in (from PROGRESS.md):
+# Two startup paths:
+#
+#   1. SQL-native (default, free-tier compatible)
+#      init_db_from_csv() → apply_pipeline_sql()
+#      DuckDB reads CSV directly; full pandas DataFrame never created.
+#      Peak memory: ~200–350 MB → fits Render/Railway free tier (512 MB).
+#
+#   2. Pandas (legacy fallback, requires 2 GB RAM)
+#      load_csv() → run_pipeline() → init_db()
+#      Kept for local development or if the SQL path encounters an issue.
+#
+# Phase 0 decisions:
 #   null_strategy = global_median  (null rate ~10%, uniform across cohorts)
 #   waste_threshold = 375.14       (p75 of waiting-state power_consumption)
-#   memory_tier = Railway Starter  (post-downcast footprint ~500–800MB)
 
 import pandas as pd
 import numpy as np
@@ -15,6 +24,100 @@ from datetime import timezone
 from app.config import NULLABLE_COLS, WASTE_POWER_THRESHOLD
 
 logger = logging.getLogger(__name__)
+
+
+def apply_pipeline_sql() -> None:
+    """
+    Apply null imputation and derived metrics entirely in DuckDB SQL.
+
+    Memory-efficient path — the full 2M-row DataFrame never exists in pandas.
+    Operates directly on the 'telemetry' table created by init_db_from_csv().
+
+    Steps:
+        1. Log null rates per nullable column.
+        2. Compute global medians via SQL MEDIAN() aggregate.
+        3. Rebuild 'telemetry' with COALESCE (null fill) + derived columns
+           (throughput, compute_value, is_wasting_energy) in a single pass.
+           Uses a CREATE/DROP/RENAME cycle so both copies never coexist long.
+
+    Raises:
+        Exception: Logged and re-raised on failure.
+    """
+    from app.database import get_connection
+
+    conn = get_connection()
+    try:
+        # ── 1. Log null rates ────────────────────────────────────────────────
+        null_sql = "SELECT " + ", ".join(
+            f"ROUND(COUNT(*) FILTER (WHERE {col} IS NULL)::DOUBLE "
+            f"/ COUNT(*) * 100, 4) AS {col}_pct"
+            for col in NULLABLE_COLS
+        ) + " FROM telemetry"
+        null_df = conn.execute(null_sql).fetchdf()
+        logger.info(f"Null rates per column (%):\n{null_df.T.to_string()}")
+
+        # ── 2. Compute global medians ────────────────────────────────────────
+        median_sql = "SELECT " + ", ".join(
+            f"MEDIAN({col}) AS {col}" for col in NULLABLE_COLS
+        ) + " FROM telemetry"
+        meds = conn.execute(median_sql).fetchone()
+        med = dict(zip(NULLABLE_COLS, meds))
+        logger.info(
+            f"Global medians (null_strategy=global_median): "
+            + ", ".join(f"{k}={v:.4f}" for k, v in med.items())
+        )
+
+        # ── 3. Rebuild table with COALESCE + derived metrics ─────────────────
+        # execution_time: also replace 0 → median to avoid divide-by-zero
+        et = med["execution_time"]
+        nei = med["num_executed_instructions"]
+        pwr = med["power_consumption"]
+
+        rebuild_sql = f"""
+            CREATE TABLE telemetry_clean AS
+            SELECT
+                vm_id,
+                timestamp,
+                COALESCE(cpu_usage,                  {med['cpu_usage']})::FLOAT  AS cpu_usage,
+                COALESCE(memory_usage,               {med['memory_usage']})::FLOAT AS memory_usage,
+                COALESCE(network_traffic,            {med['network_traffic']})::FLOAT AS network_traffic,
+                COALESCE(power_consumption,          {pwr})::FLOAT AS power_consumption,
+                COALESCE(num_executed_instructions,  {nei})::FLOAT AS num_executed_instructions,
+                COALESCE(NULLIF(execution_time, 0),  {et})::FLOAT  AS execution_time,
+                energy_efficiency::FLOAT,
+                task_type,
+                task_priority,
+                task_status,
+                (COALESCE(num_executed_instructions, {nei})
+                    / COALESCE(NULLIF(execution_time, 0), {et})
+                )::FLOAT AS throughput,
+                (COALESCE(num_executed_instructions, {nei})
+                    / COALESCE(NULLIF(execution_time, 0), {et})
+                    * COALESCE(energy_efficiency, 0)
+                )::FLOAT AS compute_value,
+                CASE
+                    WHEN task_status = 'waiting'
+                     AND COALESCE(power_consumption, {pwr}) > {WASTE_POWER_THRESHOLD}
+                    THEN 1 ELSE 0
+                END::INTEGER AS is_wasting_energy
+            FROM telemetry
+        """
+        conn.execute(rebuild_sql)
+        conn.execute("DROP TABLE telemetry")
+        conn.execute("ALTER TABLE telemetry_clean RENAME TO telemetry")
+
+        waste_rate = conn.execute(
+            "SELECT AVG(is_wasting_energy) FROM telemetry"
+        ).fetchone()[0]
+        row_count = conn.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0]
+        logger.info(
+            f"Pipeline (SQL) complete — {row_count} rows, "
+            f"waste_threshold={WASTE_POWER_THRESHOLD:.2f}, "
+            f"fleet_waste_rate={waste_rate:.4%}"
+        )
+    except Exception as e:
+        logger.error(f"apply_pipeline_sql failed: {e}")
+        raise
 
 
 def run_pipeline(df: pd.DataFrame) -> pd.DataFrame:

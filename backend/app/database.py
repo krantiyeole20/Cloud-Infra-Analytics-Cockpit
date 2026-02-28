@@ -7,6 +7,8 @@
 # The pipeline runs null handling + derived metrics before this module
 # ever sees the data.
 
+import os
+
 import duckdb
 import pandas as pd
 import logging
@@ -14,6 +16,39 @@ import logging
 logger = logging.getLogger(__name__)
 
 _conn: duckdb.DuckDBPyConnection | None = None
+
+
+def init_db_from_csv(csv_path: str) -> None:
+    """
+    Load the telemetry CSV directly into DuckDB without a pandas intermediary.
+
+    Memory-efficient startup path: DuckDB's columnar format uses ~3x less
+    memory than an equivalent pandas DataFrame. The full 2M-row pandas object
+    is never created. Call apply_pipeline_sql() after this to handle nulls
+    and add derived metric columns.
+
+    Args:
+        csv_path: Path to telemetry.csv (relative to cwd or absolute).
+
+    Raises:
+        Exception: Logged and re-raised on failure.
+    """
+    global _conn
+    try:
+        _conn = duckdb.connect(database=":memory:", read_only=False)
+        abs_path = os.path.abspath(csv_path)
+        _conn.execute(
+            f"CREATE TABLE telemetry AS "
+            f"SELECT * FROM read_csv_auto('{abs_path}', header=true)"
+        )
+        row_count = _conn.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0]
+        logger.info(
+            f"DuckDB native CSV load complete — {row_count} rows in 'telemetry' "
+            f"(no pandas intermediary — free-tier memory path active)"
+        )
+    except Exception as e:
+        logger.error(f"init_db_from_csv failed for path='{csv_path}': {e}")
+        raise
 
 
 def init_db(df: pd.DataFrame) -> None:
