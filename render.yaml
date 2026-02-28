@@ -2,15 +2,14 @@
 #
 # Place this file at the REPO ROOT so Render's Blueprint feature can discover it.
 #
-# IMPORTANT — Memory tier:
-#   The dataset loads ~500-800MB in-memory (float32 downcast applied).
-#   Render Starter plan (2GB RAM) is required. Free tier (512MB) is NOT viable.
+# Memory tier: SQL-native startup path keeps peak memory ~350MB → free tier (512MB) viable.
 #
 # To deploy:
 #   1. Connect this GitHub repo in the Render dashboard -> "New Blueprint Instance"
 #   2. Render will read this file and create the web service + Redis automatically.
-#   3. After deploy, set CORS_ORIGINS to your Vercel frontend URL in Render dashboard.
-#   4. Set VITE_API_BASE_URL in Vercel to this service's onrender.com URL.
+#   3. In Render dashboard, set KAGGLE_USERNAME and KAGGLE_KEY (from kaggle.com/settings/account).
+#   4. After deploy, set CORS_ORIGINS to your Vercel frontend URL in Render dashboard.
+#   5. Set VITE_API_BASE_URL in Vercel to this service's onrender.com URL.
 
 services:
   - type: web
@@ -33,6 +32,10 @@ services:
         value: "375.14"
       - key: POWER_ALERT_KW
         value: "400000.0"
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false
 
   - type: redis
     name: cloud-vm-cockpit-redis

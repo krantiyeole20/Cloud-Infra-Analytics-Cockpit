@@ -75,6 +75,37 @@ async def lifespan(app: FastAPI):
     t0 = time.perf_counter()
     logger.info("=== Cloud VM Intelligence Cockpit — startup (free-tier memory path) ===")
 
+    # 0. Ensure the dataset CSV is present — download from Kaggle if missing.
+    #    kagglehub caches the download; subsequent cold starts skip this step.
+    #    Requires KAGGLE_USERNAME + KAGGLE_KEY env vars on Render.
+    import os, pathlib
+    _csv = pathlib.Path(CSV_PATH)
+    if not _csv.exists():
+        logger.info(
+            f"Step 0 — CSV not found at '{CSV_PATH}'; "
+            "downloading from Kaggle (abdurraziq01/cloud-computing-performance-metrics)…"
+        )
+        try:
+            import kagglehub
+            _dl_path = kagglehub.dataset_download(
+                "abdurraziq01/cloud-computing-performance-metrics"
+            )
+            # kagglehub puts files in a versioned cache dir — find the CSV
+            _found = list(pathlib.Path(_dl_path).rglob("*.csv"))
+            if not _found:
+                raise FileNotFoundError(f"No CSV found under kagglehub path: {_dl_path}")
+            _src = _found[0]
+            _csv.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+            shutil.copy2(_src, _csv)
+            logger.info(f"Step 0 — Dataset downloaded and copied to '{CSV_PATH}' ({_csv.stat().st_size // 1_000_000} MB)")
+        except Exception as e:
+            logger.error(f"Step 0 — Kaggle download failed: {e}")
+            raise RuntimeError(
+                "telemetry.csv is required but could not be downloaded. "
+                "Set KAGGLE_USERNAME and KAGGLE_KEY env vars on Render."
+            ) from e
+
     # 1. Load CSV directly into DuckDB — no pandas intermediary.
     #    DuckDB columnar: ~150–250 MB vs ~800 MB for pandas float64.
     logger.info(f"Step 1/5 — Loading CSV natively into DuckDB from '{CSV_PATH}'")
