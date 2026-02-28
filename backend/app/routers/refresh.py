@@ -9,7 +9,6 @@ from fastapi import APIRouter, Request
 
 from app import cache, database
 from app.config import BATCH_SIZE
-from app.ml.explainability import precompute_shap_for_top_anomalies
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -92,6 +91,7 @@ async def trigger_refresh(request: Request):
         try:
             t0 = time.perf_counter()
             if anomaly_models and request.app.state.efficiency_model:
+                from app.ml.explainability import precompute_shap_for_top_anomalies
                 top_anomalies = get_behavioral_anomalies(anomaly_models, limit=20)
                 await precompute_shap_for_top_anomalies(
                     top_anomalies,

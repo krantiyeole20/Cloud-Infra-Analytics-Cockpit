@@ -12,12 +12,14 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import shap
 from sklearn.metrics import roc_auc_score, roc_curve
 
 from app.config import SHAP_PRECOMPUTE_N
 from app.ml.efficiency import EFFICIENCY_FEATURES
 from app.ml.completion import COMPLETION_FEATURES
+
+# shap is imported lazily inside compute_shap_for_vm to avoid loading
+# ~120 MB of matplotlib/scipy at startup on memory-constrained hosts.
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,7 @@ def compute_shap_for_vm(
 
         X = df[EFFICIENCY_FEATURES].fillna(0).astype("float32")
 
+        import shap  # lazy — only loaded when a SHAP endpoint is actually hit
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
         base_value = float(explainer.expected_value)
