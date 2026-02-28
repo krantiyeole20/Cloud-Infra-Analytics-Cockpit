@@ -37,6 +37,7 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - Phase 0 — Data Analysis [2026-02-27]
 - Phase 1 — Project Scaffold and Data Foundation [2026-02-27]
 - Phase 2 — ML Engine [2026-02-27]
+- Phase 3 — API Routers [2026-02-27]
 
 ## Completed Features (flat list)
 - [x] Phase 0 / Data analysis and decision logging
@@ -56,6 +57,15 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - [x] Phase 2 / ml/completion.py (LightGBM binary, early_stopping, val_df for ROC)
 - [x] Phase 2 / ml/forecast.py (24h XGBoost + 7-day Linear Fourier, 95% CI)
 - [x] Phase 2 / ml/explainability.py (SHAP TreeExplainer, ROC curve, async precompute)
+- [x] Phase 3 / routers/refresh.py (full pipeline: synthetic→append→retrain→SHAP→invalidate)
+- [x] Phase 3 / routers/kpis.py (fleet KPIs, Redis-first 30s TTL)
+- [x] Phase 3 / routers/workload.py (/heatmap + /distribution)
+- [x] Phase 3 / routers/performance.py (/timeseries + /surface3d with safe metric/bucket validation)
+- [x] Phase 3 / routers/vms.py (cohort aggregation by task_type×priority, /sample)
+- [x] Phase 3 / routers/anomalies.py (behavioral + fleet_alert + /roc + /{vm_id}/shap)
+- [x] Phase 3 / routers/forecast.py (/24h + /7day, lazy forecast model training)
+- [x] Phase 3 / routers/topology.py (3 task_type cluster nodes + weighted edges)
+- [x] Phase 3 / routers/explorer.py (7 named templates + custom SELECT, mutation guard)
 
 ## Known Issues / Conflicts
 - **vm_id near-uniqueness**: `/vms` endpoint must aggregate by `(task_type, task_priority)` cohort, not raw `vm_id`. Logged as design decision — awaiting Phase 3 implementation.
@@ -63,18 +73,9 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - **Railway Starter required**: Free tier (512MB) is not viable for this dataset. Confirmed in `config.py` note and will be flagged in `railway.toml` in Phase 8.
 
 ## Current Phase
-Phase 3 — API Routers
+Phase 4 — Frontend Scaffold and State
 
 ## Remaining Features
-- [ ] Phase 3 / Refresh router
-- [ ] Phase 3 / KPIs router
-- [ ] Phase 3 / Workload router
-- [ ] Phase 3 / Performance router
-- [ ] Phase 3 / VMs router
-- [ ] Phase 3 / Anomalies router
-- [ ] Phase 3 / Forecast router
-- [ ] Phase 3 / Topology router
-- [ ] Phase 3 / Explorer router
 - [ ] Phase 4 / React project init
 - [ ] Phase 4 / Type definitions
 - [ ] Phase 4 / API client layer
