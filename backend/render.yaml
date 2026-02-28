@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cloud-vm-cockpit-api
+    runtime: python
+    # IMPORTANT: Render Starter plan minimum (2GB RAM)
+    # Dataset loads ~500–800MB in-memory (float32 downcast applied).
+    # Free tier (512MB) is NOT viable.
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          name: cloud-vm-cockpit-redis
+          type: redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: https://your-vercel-app.vercel.app
+      - key: WASTE_POWER_THRESHOLD
+        value: "375.14"
+      - key: POWER_ALERT_KW
+        value: "400000.0"
+      # Dataset download (set these if using kagglehub at boot)
+      # - key: KAGGLE_USERNAME
+      #   sync: false
+      # - key: KAGGLE_KEY
+      #   sync: false
+
+databases:
+  - name: cloud-vm-cockpit-redis
+    type: redis
+    plan: free

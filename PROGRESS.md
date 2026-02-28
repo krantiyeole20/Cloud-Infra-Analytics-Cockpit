@@ -36,16 +36,26 @@ Waste rate at p75 threshold: ~8.33% of fleet
 ## Completed Phases
 - Phase 0 — Data Analysis [2026-02-27]
 - Phase 1 — Project Scaffold and Data Foundation [2026-02-27]
+- Phase 2 — ML Engine [2026-02-27]
 
 ## Completed Features (flat list)
 - [x] Phase 0 / Data analysis and decision logging
-- [x] Phase 1 / Monorepo scaffold update (new files created)
-- [x] Phase 1 / Backend config and logging (config.py rewritten for Cloud VM schema)
-- [x] Phase 1 / Data pipeline (pipeline.py — NEW file)
-- [x] Phase 1 / DuckDB data layer (database.py rewritten — init_db takes DataFrame)
-- [x] Phase 1 / Synthetic data generator (synthetic.py rewritten — per-cohort covariance)
-- [x] Phase 1 / Redis cache layer (cache.py rewritten — new key registry)
-- [x] Phase 1 / FastAPI app init (main.py rewritten — new startup sequence)
+- [x] Phase 1 / Monorepo scaffold update
+- [x] Phase 1 / config.py (Cloud VM schema, WASTE_POWER_THRESHOLD=375.14)
+- [x] Phase 1 / pipeline.py (NEW — global median nulls, derived metrics, float32 downcast)
+- [x] Phase 1 / database.py (init_db takes DataFrame)
+- [x] Phase 1 / synthetic.py (per-cohort covariance, Candidate B fallback)
+- [x] Phase 1 / cache.py (new key registry + typed helpers)
+- [x] Phase 1 / main.py (load_csv→pipeline→init_db→synthetic→ML stubs→cache)
+- [x] Phase 2 / README.md (rewritten for Cloud VM / Render / new dataset)
+- [x] Phase 2 / render.yaml (replaces railway.toml)
+- [x] Phase 2 / scripts/download_data.py (kagglehub + curl fallback)
+- [x] Phase 2 / ml/efficiency.py (XGBoost, tree_method=hist, val MAE)
+- [x] Phase 2 / ml/compute_value.py (DuckDB cohort aggregation by task_type×task_priority)
+- [x] Phase 2 / ml/anomaly.py (IsolationForest per cohort, behavioral+waste queries)
+- [x] Phase 2 / ml/completion.py (LightGBM binary, early_stopping, val_df for ROC)
+- [x] Phase 2 / ml/forecast.py (24h XGBoost + 7-day Linear Fourier, 95% CI)
+- [x] Phase 2 / ml/explainability.py (SHAP TreeExplainer, ROC curve, async precompute)
 
 ## Known Issues / Conflicts
 - **vm_id near-uniqueness**: `/vms` endpoint must aggregate by `(task_type, task_priority)` cohort, not raw `vm_id`. Logged as design decision — awaiting Phase 3 implementation.
@@ -53,15 +63,9 @@ Waste rate at p75 threshold: ~8.33% of fleet
 - **Railway Starter required**: Free tier (512MB) is not viable for this dataset. Confirmed in `config.py` note and will be flagged in `railway.toml` in Phase 8.
 
 ## Current Phase
-Phase 2 — ML Engine
+Phase 3 — API Routers
 
 ## Remaining Features
-- [ ] Phase 2 / Energy efficiency predictor (`ml/efficiency.py`)
-- [ ] Phase 2 / Compute value scorer (`ml/compute_value.py`)
-- [ ] Phase 2 / Anomaly detection models (`ml/anomaly.py` — per-cohort IsolationForest)
-- [ ] Phase 2 / Task completion predictor (`ml/completion.py`)
-- [ ] Phase 2 / Power consumption forecasting (`ml/forecast.py`)
-- [ ] Phase 2 / SHAP explainability (`ml/explainability.py`)
 - [ ] Phase 3 / Refresh router
 - [ ] Phase 3 / KPIs router
 - [ ] Phase 3 / Workload router
