@@ -1,6 +1,7 @@
 // src/App.tsx
 import { useEffect } from 'react'
 import { useDashboardStore } from './store/dashboardStore'
+import SiteHeader from './components/layout/SiteHeader'
 import TopBar from './components/layout/TopBar'
 import Sidebar from './components/layout/Sidebar'
 import MainCanvas from './components/layout/MainCanvas'
@@ -14,6 +15,9 @@ export default function App() {
 
     return (
         <div className="app">
+            {/* Site-wide header: project title, dataset link, GitHub, Connect */}
+            <SiteHeader />
+
             {/* Fleet waste alert banner — fleet-alert mode per Phase 0 decision */}
             {fleetAlert?.active && (
                 <div className="fleet-banner">

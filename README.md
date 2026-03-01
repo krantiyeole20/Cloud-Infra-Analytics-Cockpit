@@ -1,5 +1,12 @@
 # Cloud VM Intelligence Cockpit
 
+<p align="center">
+  <img src="images of website/image1.png" alt="Cloud VM Intelligence Cockpit — Main Dashboard" width="100%" />
+</p>
+<p align="center"><sub><i>Main dashboard — Overview view showing fleet KPIs, workload heatmap, and energy efficiency metrics</i></sub></p>
+
+---
+
 A production-grade, real-time cloud VM monitoring and intelligence dashboard centered on **energy efficiency** as the primary operational metric. The system ingests a 2M-row VM telemetry dataset, enriches it with statistically faithful synthetic data on each user-triggered refresh, runs four ML models per VM cohort, and surfaces results through a cockpit-style React frontend backed by a FastAPI service layer.
 
 > **Central narrative**: How much useful computational work is each VM delivering per unit of energy consumed — and which VMs are wasting power while doing nothing?
@@ -56,6 +63,26 @@ unzip backend/data/telemetry.zip -d backend/data/ && mv backend/data/*.csv backe
 ```
 
 > The CSV is **not committed** to the repo (338MB). Place it at `backend/data/telemetry.csv` before starting the server. Run `python scripts/download_data.py` to automate this.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="images of website/image2.png" alt="Workload Heatmap" width="49%" />
+  <img src="images of website/image3.png" alt="Anomaly Detection View" width="49%" />
+</p>
+<p align="center">
+  <sub><i>Left: Workload heatmap — task_type × metric aggregation matrix &nbsp;|&nbsp; Right: Anomaly detection — behavioral anomaly scatter and fleet waste alert</i></sub>
+</p>
+
+<p align="center">
+  <img src="images of website/image4.png" alt="Forecast View" width="49%" />
+  <img src="images of website/image5.png" alt="Explorer View" width="49%" />
+</p>
+<p align="center">
+  <sub><i>Left: Power forecast — 24h XGBoost + 7-day linear forecast with confidence intervals &nbsp;|&nbsp; Right: SQL Explorer — templated DuckDB query execution</i></sub>
+</p>
 
 ---
 
@@ -211,7 +238,7 @@ The backend deploys to Render as a **Web Service** (Python 3.11 runtime).
 
 - **Build Command**: `pip install -r requirements.txt`
 - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- **Plan**: Render Starter or Standard (**minimum 2GB RAM** required — dataset occupies ~500–800MB in-memory after float32 downcast)
+- **Plan**: Render Free tier (512MB RAM) — SQL-native startup path keeps peak memory ~350MB
 - **Redis**: Add a Render Redis instance and set `REDIS_URL` in the service environment
 
 > ⚠️ The dataset (`backend/data/telemetry.csv`) is not committed to the repo. On Render, use the startup script to download it via `kagglehub` by setting `KAGGLE_USERNAME` and `KAGGLE_KEY` environment variables, or use a persistent disk mount.

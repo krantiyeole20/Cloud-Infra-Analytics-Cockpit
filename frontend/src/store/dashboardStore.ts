@@ -21,12 +21,18 @@ import type {
     TaskType,
 } from '../types'
 import * as api from '../api/client'
+import {
+    MOCK_KPIS, MOCK_HEATMAP, MOCK_DISTRIBUTION, MOCK_TIMESERIES,
+    MOCK_VMS, MOCK_ANOMALIES, MOCK_ROC, MOCK_FORECAST_24H,
+    MOCK_FORECAST_7DAY, MOCK_TOPOLOGY,
+} from '../api/mockData'
 
 // ── Loading state helper ──────────────────────────────────────────────────────
 type AsyncState<T> = {
     data: T | null
     loading: boolean
     error: string | null
+    demo?: boolean   // true when data is mock fallback
 }
 
 const init = <T>(): AsyncState<T> => ({ data: null, loading: false, error: null })
@@ -81,6 +87,20 @@ interface DashboardStore {
     fetchOverview: () => Promise<void>
 }
 
+// ── Mock fallback map — used when the backend is unreachable ─────────────────
+const MOCK_FALLBACKS: Partial<Record<keyof DashboardStore, unknown>> = {
+    kpis:        MOCK_KPIS,
+    heatmap:     MOCK_HEATMAP,
+    distribution: MOCK_DISTRIBUTION,
+    timeSeries:  MOCK_TIMESERIES,
+    vms:         MOCK_VMS,
+    anomalies:   MOCK_ANOMALIES,
+    roc:         MOCK_ROC,
+    forecast24h: MOCK_FORECAST_24H,
+    forecast7day: MOCK_FORECAST_7DAY,
+    topology:    MOCK_TOPOLOGY,
+}
+
 // ── Helper: wrap any fetch call in loading/error state ────────────────────────
 type SetFn = (partial: Partial<DashboardStore> | ((state: DashboardStore) => Partial<DashboardStore>)) => void
 
@@ -92,10 +112,16 @@ async function fetchSlice<T>(
     set((s) => ({ ...s, [key]: { ...((s[key] as AsyncState<T>)), loading: true, error: null } }))
     try {
         const data = await fetcher()
-        set((s) => ({ ...s, [key]: { data, loading: false, error: null } }))
+        set((s) => ({ ...s, [key]: { data, loading: false, error: null, demo: false } }))
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        set((s) => ({ ...s, [key]: { ...((s[key] as AsyncState<T>)), data: null, loading: false, error: msg } }))
+        const fallback = MOCK_FALLBACKS[key] as T | undefined
+        if (fallback !== undefined) {
+            // Backend unreachable — serve mock data so the UI is still usable
+            set((s) => ({ ...s, [key]: { data: fallback, loading: false, error: null, demo: true } }))
+        } else {
+            const msg = err instanceof Error ? err.message : String(err)
+            set((s) => ({ ...s, [key]: { ...((s[key] as AsyncState<T>)), data: null, loading: false, error: msg } }))
+        }
     }
 }
 

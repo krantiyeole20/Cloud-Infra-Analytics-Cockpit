@@ -30,6 +30,7 @@ export default function TopBar() {
     const waste = d ? d.vms_wasting_energy_pct.toFixed(1) : '—'
     const recs = d ? (d.total_vm_records / 1_000_000).toFixed(2) + 'M' : '—'
 
+    const isDemo = (kpis as any).demo === true
     const isLoading = kpis.loading || isRefreshing
 
     return (
@@ -69,13 +70,18 @@ export default function TopBar() {
 
             {/* Actions */}
             <div className="topbar-actions">
+                {isDemo && (
+                    <span className="demo-badge" title="Backend offline — showing representative demo data">
+                        DEMO
+                    </span>
+                )}
                 <div className="topbar-status">
                     <span className={`status-dot ${isLoading ? 'loading' : ''}`} />
                     {isLoading
                         ? 'Updating…'
                         : lastRefreshedAt
                             ? `Refreshed ${lastRefreshedAt}`
-                            : 'Live'}
+                            : isDemo ? 'Demo mode' : 'Live'}
                 </div>
                 <button
                     className={`btn-refresh ${isRefreshing ? 'spinning' : ''}`}
