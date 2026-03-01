@@ -84,7 +84,7 @@ def apply_pipeline_sql() -> None:
                 COALESCE(power_consumption,          {pwr})::FLOAT AS power_consumption,
                 COALESCE(num_executed_instructions,  {nei})::FLOAT AS num_executed_instructions,
                 COALESCE(NULLIF(execution_time, 0),  {et})::FLOAT  AS execution_time,
-                energy_efficiency::FLOAT,
+                energy_efficiency::FLOAT                                           AS energy_efficiency,
                 task_type,
                 task_priority,
                 task_status,
