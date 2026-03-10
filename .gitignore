@@ -65,3 +65,6 @@ dump.rdb
 archive.zip
 vmCloud_data.csv
 backend/data/telemetry.csv
+
+# Private analysis docs
+RESULTS.md

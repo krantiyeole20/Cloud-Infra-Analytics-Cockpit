@@ -1,9 +1,11 @@
-// src/components/views/AnomalyView.tsx — Phase 7: RocCurve + ShapWaterfall + VmDetailCard
+// src/components/views/AnomalyView.tsx
 import { useEffect, useState } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import RocCurve from '../charts/RocCurve'
 import ShapWaterfall from '../charts/ShapWaterfall'
 import VmDetailCard from '../cards/VmDetailCard'
+import ViewHeader from '../shared/ViewHeader'
+import { VIEW_DESCRIPTIONS, CHART_DESCRIPTIONS } from '../../constants/descriptions'
 
 export default function AnomalyView() {
     const anomalies = useDashboardStore((s) => s.anomalies)
@@ -22,10 +24,7 @@ export default function AnomalyView() {
 
     return (
         <div className="view">
-            <div className="view-header">
-                <h1 className="view-title">Anomaly Detection</h1>
-                <p className="view-subtitle">Behavioral IsolationForest scores, SHAP explanations, and energy waste fleet alerts.</p>
-            </div>
+            <ViewHeader title="Anomaly Detection" subtitle={VIEW_DESCRIPTIONS.anomaly} />
 
             {/* Fleet alert */}
             {fa && (
@@ -51,19 +50,23 @@ export default function AnomalyView() {
                 {/* Behavioral anomaly table */}
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Behavioral Anomalies</div>
-                            <div className="chart-card-subtitle">Click a row to load SHAP waterfall</div>
-                        </div>
+                        <div className="chart-card-title">Behavioral Anomalies</div>
                         {behavioral.length > 0 && <span className="badge badge-high">{behavioral.length}</span>}
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.behavioral_table}</div>
                     {behavioral.length ? (
                         <table className="data-table">
                             <thead><tr><th>Type</th><th>Priority</th><th>Score</th><th>Power</th><th>CPU</th><th>SHAP</th></tr></thead>
                             <tbody>
                                 {behavioral.slice(0, 8).map((row, i) => (
-                                    <tr key={i} style={{ cursor: 'pointer', background: row.vm_id === selectedVm ? 'rgba(59,130,246,.08)' : undefined }}
-                                        onClick={() => setSelectedVm(row.vm_id === selectedVm ? null : row.vm_id)}>
+                                    <tr
+                                        key={i}
+                                        style={{
+                                            cursor: 'pointer',
+                                            background: row.vm_id === selectedVm ? 'rgba(245,158,11,.08)' : undefined,
+                                        }}
+                                        onClick={() => setSelectedVm(row.vm_id === selectedVm ? null : row.vm_id)}
+                                    >
                                         <td><span className={`badge badge-${row.task_type}`}>{row.task_type}</span></td>
                                         <td><span className={`badge badge-${row.task_priority}`}>{row.task_priority}</span></td>
                                         <td className="mono" style={{ color: (row.behavioral_anomaly_score ?? 0) > .8 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>
@@ -86,11 +89,9 @@ export default function AnomalyView() {
                 {/* ROC curve */}
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Completion Predictor ROC</div>
-                            <div className="chart-card-subtitle">LightGBM · held-out validation</div>
-                        </div>
+                        <div className="chart-card-title">Completion Predictor ROC</div>
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.roc_curve}</div>
                     {roc.data
                         ? <RocCurve data={roc.data} height={260} />
                         : <div className="chart-placeholder">
@@ -100,21 +101,26 @@ export default function AnomalyView() {
                 </div>
             </div>
 
-            {/* SHAP waterfall / VmDetailCard panel */}
+            {/* VM investigation panel — fixed right overlay */}
             {selectedVm && (
                 <div className="chart-card" style={{
                     border: '1px solid var(--border-strong)',
                     boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
                     position: 'fixed', right: 20, top: 70, bottom: 20, width: 440,
                     zIndex: 100, display: 'flex', flexDirection: 'column',
-                    background: 'var(--bg-surface-1)'
+                    background: 'var(--bg-surface-2)',
                 }}>
                     <div className="chart-card-header" style={{ flexShrink: 0 }}>
                         <div>
                             <div className="chart-card-title">VM Investigation Panel</div>
                             <div className="chart-card-subtitle">{selectedVm}</div>
                         </div>
-                        <button onClick={() => setSelectedVm(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18 }}>✕</button>
+                        <button
+                            onClick={() => setSelectedVm(null)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18 }}
+                        >
+                            ✕
+                        </button>
                     </div>
 
                     <div style={{ padding: '0 20px', flex: 1, overflowY: 'auto' }}>
@@ -124,7 +130,7 @@ export default function AnomalyView() {
                             computeValue={behavioral.find(b => b.vm_id === selectedVm)?.compute_value ?? 0.5}
                             energyEfficiency={behavioral.find(b => b.vm_id === selectedVm)?.energy_efficiency ?? 0.5}
                             behavioralScore={behavioral.find(b => b.vm_id === selectedVm)?.behavioral_anomaly_score ?? 0.8}
-                            completionProb={0.65} // Mock or fetch from completion model if available
+                            completionProb={0.65}
                             onShapRequest={(id) => fetchShap(id)}
                         />
 
@@ -135,7 +141,9 @@ export default function AnomalyView() {
                             </div>
                         ) : (
                             <div style={{ marginTop: 20, padding: 20, textAlign: 'center', color: 'var(--text-3)' }}>
-                                {shap.loading ? <span className="loading-pulse">Computing SHAP…</span> : 'Click View SHAP Breakdown to load explanations.'}
+                                {shap.loading
+                                    ? <span className="loading-pulse">Computing SHAP…</span>
+                                    : 'Click View SHAP Breakdown to load explanations.'}
                             </div>
                         )}
                     </div>
@@ -146,11 +154,9 @@ export default function AnomalyView() {
             {anomalies.data?.waste_samples?.length && (
                 <div className="chart-card" style={{ marginTop: 16 }}>
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Waste Anomaly Samples</div>
-                            <div className="chart-card-subtitle">VMs above idle power threshold</div>
-                        </div>
+                        <div className="chart-card-title">Waste Anomaly Samples</div>
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.waste_anomaly_table}</div>
                     <table className="data-table">
                         <thead><tr><th>VM ID</th><th>Type</th><th>Power (W)</th><th>Efficiency</th><th>Compute Value</th></tr></thead>
                         <tbody>

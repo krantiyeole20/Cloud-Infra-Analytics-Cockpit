@@ -1,6 +1,8 @@
 // src/components/views/ExplorerView.tsx
 import { useEffect, useState } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
+import ViewHeader from '../shared/ViewHeader'
+import { VIEW_DESCRIPTIONS } from '../../constants/descriptions'
 
 export default function ExplorerView() {
     const templates = useDashboardStore((s) => s.explorerResult)
@@ -35,12 +37,8 @@ export default function ExplorerView() {
 
     return (
         <div className="view">
-            <div className="view-header">
-                <h1 className="view-title">Data Explorer</h1>
-                <p className="view-subtitle">Run SQL queries or pick a named template against the 2M-row DuckDB telemetry table.</p>
-            </div>
+            <ViewHeader title="Data Explorer" subtitle={VIEW_DESCRIPTIONS.explorer} />
 
-            {/* Query builder */}
             <div className="chart-card" style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
                     <button
@@ -49,7 +47,7 @@ export default function ExplorerView() {
                             padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)',
                             background: mode === 'template' ? 'var(--accent-glow)' : 'var(--bg-surface-2)',
                             color: mode === 'template' ? 'var(--accent)' : 'var(--text-2)',
-                            cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                            cursor: 'pointer', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font)',
                         }}>
                         Named Templates
                     </button>
@@ -59,7 +57,7 @@ export default function ExplorerView() {
                             padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)',
                             background: mode === 'custom' ? 'var(--accent-glow)' : 'var(--bg-surface-2)',
                             color: mode === 'custom' ? 'var(--accent)' : 'var(--text-2)',
-                            cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                            cursor: 'pointer', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font)',
                         }}>
                         Custom SQL
                     </button>
@@ -102,6 +100,7 @@ export default function ExplorerView() {
                         padding: '8px 18px', borderRadius: 8,
                         background: 'var(--accent)', color: 'white', border: 'none',
                         fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: templates.loading ? .6 : 1,
+                        fontFamily: 'var(--font)',
                     }}>
                     {templates.loading ? '⏳ Running…' : '▶ Run Query'}
                 </button>
@@ -117,15 +116,12 @@ export default function ExplorerView() {
                 )}
             </div>
 
-            {/* Results */}
             {result && (
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Query Results</div>
-                            <div className="chart-card-subtitle">{result.row_count} rows · {result.columns.join(', ')}</div>
-                        </div>
+                        <div className="chart-card-title">Query Results</div>
                     </div>
+                    <div className="chart-card-subtitle">{result.row_count} rows · {result.columns.join(', ')}</div>
                     <div style={{ overflowX: 'auto' }}>
                         <table className="data-table">
                             <thead>

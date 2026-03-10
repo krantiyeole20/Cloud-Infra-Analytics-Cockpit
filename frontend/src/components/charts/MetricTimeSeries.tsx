@@ -1,13 +1,11 @@
 // src/components/charts/MetricTimeSeries.tsx
-// Recharts LineChart for any float metric over time.
-// Supports optional task_type filter and CI area bands.
 import {
-    ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-    CartesianGrid, Tooltip, Legend, Area, AreaChart,
+    ResponsiveContainer, Area, XAxis, YAxis,
+    CartesianGrid, Tooltip, AreaChart,
 } from 'recharts'
 import { useEffect, useMemo } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
-import { TASK_TYPE_COLORS, METRIC_LABELS } from '../../constants'
+import { METRIC_LABELS } from '../../constants'
 import type { TaskType } from '../../types'
 
 interface Props {
@@ -17,8 +15,6 @@ interface Props {
     height?: number
     title?: string
 }
-
-const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6']
 
 export default function MetricTimeSeries({
     metric = 'energy_efficiency',
@@ -45,6 +41,16 @@ export default function MetricTimeSeries({
 
     const label = title ?? METRIC_LABELS[metric] ?? metric
     const isEfficiency = metric === 'energy_efficiency'
+    const lineColor = isEfficiency ? '#10b981' : '#f59e0b'
+
+    const formatDate = (v: string) => {
+        try {
+            const d = new Date(v + 'T00:00:00')
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        } catch {
+            return v
+        }
+    }
 
     if (timeSeries.loading) {
         return (
@@ -55,35 +61,44 @@ export default function MetricTimeSeries({
     }
 
     if (!data.length) {
-        return (
-            <div className="chart-placeholder" style={{ height }}>No time-series data</div>
-        )
+        return <div className="chart-placeholder" style={{ height }}>No time-series data</div>
     }
 
     return (
         <ResponsiveContainer width="100%" height={height}>
-            <AreaChart data={data} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
                 <defs>
                     <linearGradient id="grad-ts" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={isEfficiency ? '#10b981' : '#3b82f6'} stopOpacity={0.25} />
-                        <stop offset="95%" stopColor={isEfficiency ? '#10b981' : '#3b82f6'} stopOpacity={0} />
+                        <stop offset="5%" stopColor={lineColor} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(240,235,227,0.05)" />
                 <XAxis
                     dataKey="ts"
                     tick={{ fontSize: 10, fill: 'var(--text-3)' }}
                     tickLine={false}
                     axisLine={false}
                     interval="preserveStartEnd"
+                    tickFormatter={formatDate}
                 />
                 <YAxis
                     tick={{ fontSize: 10, fill: 'var(--text-3)' }}
                     tickLine={false}
                     axisLine={false}
+                    width={52}
                     tickFormatter={(v: number) =>
-                        isEfficiency ? `${(v * 100).toFixed(0)}%` : v.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                        isEfficiency
+                            ? `${(v * 100).toFixed(0)}%`
+                            : v.toLocaleString(undefined, { maximumFractionDigits: 0 })
                     }
+                    label={{
+                        value: isEfficiency ? 'Efficiency' : label,
+                        angle: -90,
+                        position: 'insideLeft',
+                        offset: 14,
+                        style: { fill: 'var(--text-3)', fontSize: 9 },
+                    }}
                 />
                 <Tooltip
                     contentStyle={{
@@ -93,18 +108,21 @@ export default function MetricTimeSeries({
                         fontSize: 12,
                     }}
                     labelStyle={{ color: 'var(--text-2)', marginBottom: 4 }}
+                    labelFormatter={formatDate}
                     formatter={(v: number) =>
-                        isEfficiency ? [`${(v * 100).toFixed(2)}%`, label] : [v.toLocaleString(undefined, { maximumFractionDigits: 2 }), label]
+                        isEfficiency
+                            ? [`${(v * 100).toFixed(2)}%`, label]
+                            : [v.toLocaleString(undefined, { maximumFractionDigits: 2 }), label]
                     }
                 />
                 <Area
                     type="monotone"
                     dataKey="value"
-                    stroke={isEfficiency ? '#10b981' : '#3b82f6'}
+                    stroke={lineColor}
                     strokeWidth={2}
                     fill="url(#grad-ts)"
                     dot={false}
-                    activeDot={{ r: 4, fill: isEfficiency ? '#10b981' : '#3b82f6' }}
+                    activeDot={{ r: 4, fill: lineColor }}
                 />
             </AreaChart>
         </ResponsiveContainer>

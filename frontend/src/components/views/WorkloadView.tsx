@@ -1,9 +1,11 @@
-// src/components/views/WorkloadView.tsx — Phase 6: WorkloadHeatmap + EfficiencySurface3D
+// src/components/views/WorkloadView.tsx
 import { useEffect, useState } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import WorkloadHeatmap from '../charts/WorkloadHeatmap'
 import EfficiencySurface3D from '../charts/EfficiencySurface3D'
 import MetricTimeSeries from '../charts/MetricTimeSeries'
+import ViewHeader from '../shared/ViewHeader'
+import { VIEW_DESCRIPTIONS, CHART_DESCRIPTIONS } from '../../constants/descriptions'
 import type { Surface3DResponse } from '../../types'
 
 export default function WorkloadView() {
@@ -20,7 +22,6 @@ export default function WorkloadView() {
         fetchDistribution()
         fetchVms()
         fetchTimeSeries('cpu_usage', 'day')
-        // Fetch surface3d directly — no store slot, surface data is view-local
         import('../../api/client').then(({ getSurface3D }) =>
             getSurface3D('day').then(setSurface3d).catch(() => { })
         )
@@ -28,20 +29,14 @@ export default function WorkloadView() {
 
     return (
         <div className="view">
-            <div className="view-header">
-                <h1 className="view-title">Workload Analysis</h1>
-                <p className="view-subtitle">Resource heatmap, efficiency trends by task type, and compute value cohort rankings.</p>
-            </div>
+            <ViewHeader title="Workload Analysis" subtitle={VIEW_DESCRIPTIONS.workload} />
 
-            {/* Heatmap + efficiency trends */}
             <div className="chart-grid cols-2" style={{ marginBottom: 16 }}>
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Resource Heatmap</div>
-                            <div className="chart-card-subtitle">task_type × metric — averaged across all priorities</div>
-                        </div>
+                        <div className="chart-card-title">Resource Heatmap</div>
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.workload_heatmap}</div>
                     {heatmap.data
                         ? <WorkloadHeatmap data={heatmap.data} height={180} />
                         : <div className="chart-placeholder">
@@ -52,11 +47,9 @@ export default function WorkloadView() {
 
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">Efficiency Trends by Task Type</div>
-                            <div className="chart-card-subtitle">Daily avg — io / network / compute</div>
-                        </div>
+                        <div className="chart-card-title">Efficiency Trends by Task Type</div>
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.efficiency_surface}</div>
                     {surface3d
                         ? <EfficiencySurface3D data={surface3d} height={260} />
                         : <div className="chart-placeholder"><span className="loading-pulse">Loading trends…</span></div>
@@ -64,25 +57,19 @@ export default function WorkloadView() {
                 </div>
             </div>
 
-            {/* CPU time-series */}
             <div className="chart-card" style={{ marginBottom: 16 }}>
                 <div className="chart-card-header">
-                    <div>
-                        <div className="chart-card-title">CPU Usage Over Time</div>
-                        <div className="chart-card-subtitle">Daily average across fleet</div>
-                    </div>
+                    <div className="chart-card-title">CPU Usage Over Time</div>
                 </div>
+                <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.cpu_timeseries}</div>
                 <MetricTimeSeries metric="cpu_usage" bucket="day" height={200} />
             </div>
 
-            {/* Cohort rankings */}
             <div className="chart-card">
                 <div className="chart-card-header">
-                    <div>
-                        <div className="chart-card-title">Compute Value Rankings</div>
-                        <div className="chart-card-subtitle">By (task_type × task_priority) cohort</div>
-                    </div>
+                    <div className="chart-card-title">Compute Value Rankings</div>
                 </div>
+                <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.vm_cohort_rankings}</div>
                 {vms.data?.cohorts?.length ? (
                     <table className="data-table">
                         <thead>

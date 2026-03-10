@@ -1,8 +1,10 @@
-// src/components/views/ForecastView.tsx — Phase 6: ForecastChart24h + ForecastChart7Day
+// src/components/views/ForecastView.tsx
 import { useEffect } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 import { ForecastChart24h, ForecastChart7Day } from '../charts/ForecastChart'
 import KpiCard from '../cards/KpiCard'
+import ViewHeader from '../shared/ViewHeader'
+import { VIEW_DESCRIPTIONS, CHART_DESCRIPTIONS } from '../../constants/descriptions'
 
 export default function ForecastView() {
     const f24 = useDashboardStore((s) => s.forecast24h)
@@ -17,14 +19,8 @@ export default function ForecastView() {
 
     return (
         <div className="view">
-            <div className="view-header">
-                <h1 className="view-title">Power Forecast</h1>
-                <p className="view-subtitle">
-                    24-hour XGBoost forecast (lag 1/6/24h features) and 7-day Fourier linear model with 95% confidence intervals.
-                </p>
-            </div>
+            <ViewHeader title="Power Forecast" subtitle={VIEW_DESCRIPTIONS.forecast} />
 
-            {/* 7-day peak alert */}
             {d7?.alert && (
                 <div style={{
                     padding: '12px 18px', borderRadius: 10, marginBottom: 20,
@@ -35,18 +31,13 @@ export default function ForecastView() {
                 </div>
             )}
 
-            {/* Chart row */}
             <div className="chart-grid cols-2" style={{ marginBottom: 16 }}>
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">24-Hour Power Forecast</div>
-                            <div className="chart-card-subtitle">
-                                XGBoost · MAE ≈ {d24?.mae?.toFixed(1) ?? '—'} kW · {d24?.horizon_hours ?? 24}h horizon
-                            </div>
-                        </div>
+                        <div className="chart-card-title">24-Hour Power Forecast</div>
                         {d24 && <span className="badge badge-network">{d24.horizon_hours}h</span>}
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.forecast_24h}</div>
                     {d24
                         ? <ForecastChart24h data={d24} height={260} />
                         : <div className="chart-placeholder">
@@ -57,12 +48,10 @@ export default function ForecastView() {
 
                 <div className="chart-card">
                     <div className="chart-card-header">
-                        <div>
-                            <div className="chart-card-title">7-Day Power Forecast</div>
-                            <div className="chart-card-subtitle">Fourier linear (7d + 3.5d seasonality)</div>
-                        </div>
+                        <div className="chart-card-title">7-Day Power Forecast</div>
                         {d7?.alert && <span className="badge badge-high">PEAK ALERT</span>}
                     </div>
+                    <div className="chart-card-subtitle">{CHART_DESCRIPTIONS.forecast_7day}</div>
                     {d7
                         ? <ForecastChart7Day data={d7} height={260} />
                         : <div className="chart-placeholder">
@@ -72,7 +61,6 @@ export default function ForecastView() {
                 </div>
             </div>
 
-            {/* Summary stats */}
             {(d24 || d7) && (
                 <div className="chart-grid cols-2">
                     {d24 && (
@@ -109,15 +97,12 @@ export default function ForecastView() {
                                 <div className="chart-card-title">7-Day Summary</div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                                <KpiCard
-                                    label="Peak Day"
-                                    value={d7.peak_day}
-                                />
+                                <KpiCard label="Peak Day" value={d7.peak_day} />
                                 <KpiCard
                                     label="Peak Power"
                                     value={d7.peak_predicted_kw.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     unit="kW"
-                                    color={d7.alert ? "red" : "amber"}
+                                    color={d7.alert ? 'red' : 'amber'}
                                 />
                             </div>
                             <table className="data-table">

@@ -37,6 +37,9 @@ type AsyncState<T> = {
 
 const init = <T>(): AsyncState<T> => ({ data: null, loading: false, error: null })
 
+// Pre-populate a slice with demo data instantly, before any network request
+const initDemo = <T>(data: T): AsyncState<T> => ({ data, loading: false, error: null, demo: true })
+
 // ── Store interface ───────────────────────────────────────────────────────────
 interface DashboardStore {
     // Navigation
@@ -109,14 +112,19 @@ async function fetchSlice<T>(
     key: keyof DashboardStore,
     fetcher: () => Promise<T>
 ) {
-    set((s) => ({ ...s, [key]: { ...((s[key] as AsyncState<T>)), loading: true, error: null } }))
+    // If the slice already has demo data, skip the loading spinner — silently upgrade in background
+    set((s) => {
+        const cur = s[key] as AsyncState<T>
+        if (cur.data) return s  // already populated — no spinner
+        return { ...s, [key]: { ...cur, loading: true, error: null } }
+    })
     try {
         const data = await fetcher()
         set((s) => ({ ...s, [key]: { data, loading: false, error: null, demo: false } }))
     } catch (err) {
         const fallback = MOCK_FALLBACKS[key] as T | undefined
         if (fallback !== undefined) {
-            // Backend unreachable — serve mock data so the UI is still usable
+            // Backend unreachable — keep/restore mock data so the UI is still usable
             set((s) => ({ ...s, [key]: { data: fallback, loading: false, error: null, demo: true } }))
         } else {
             const msg = err instanceof Error ? err.message : String(err)
@@ -145,20 +153,20 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     lastRefreshedAt: null,
     rowsInDb: 0,
 
-    // Data slices — initial empty state
-    kpis: init(),
-    heatmap: init(),
-    distribution: init(),
-    timeSeries: init(),
-    vms: init(),
-    vmSummary: init(),
-    anomalies: init(),
-    shap: init(),
-    roc: init(),
-    forecast24h: init(),
-    forecast7day: init(),
-    topology: init(),
-    explorerResult: init(),
+    // Data slices — pre-populated with demo data for instant first render
+    kpis:           initDemo<KpisResponse>(MOCK_KPIS),
+    heatmap:        initDemo<WorkloadHeatmapResponse>(MOCK_HEATMAP),
+    distribution:   initDemo<WorkloadDistributionItem[]>(MOCK_DISTRIBUTION),
+    timeSeries:     initDemo<TimeSeriesResponse>(MOCK_TIMESERIES),
+    vms:            initDemo<VmsResponse>(MOCK_VMS),
+    vmSummary:      init<VmSummaryItem[]>(),
+    anomalies:      initDemo<AnomaliesResponse>(MOCK_ANOMALIES),
+    shap:           init<ShapResponse>(),
+    roc:            initDemo<RocResponse>(MOCK_ROC),
+    forecast24h:    initDemo<Forecast24hResponse>(MOCK_FORECAST_24H),
+    forecast7day:   initDemo<Forecast7DayResponse>(MOCK_FORECAST_7DAY),
+    topology:       initDemo<TopologyResponse>(MOCK_TOPOLOGY),
+    explorerResult: init<ExplorerQueryResponse>(),
 
     // ── Fetch actions ───────────────────────────────────────────────────────────
     fetchKpis: () => fetchSlice(set, 'kpis', api.getKpis),

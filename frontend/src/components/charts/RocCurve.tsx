@@ -23,15 +23,17 @@ export default function RocCurve({ data, height = 260 }: Props) {
             {/* AUC badge */}
             <div style={{
                 position: 'absolute', top: 8, right: 8, zIndex: 10,
-                background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)',
-                borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+                background: 'var(--bg-surface-3)',
+                border: `2px solid ${data.auc > 0.7 ? 'var(--accent-green)' : data.auc > 0.55 ? 'var(--accent-amber)' : 'var(--border-strong)'}`,
+                borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 700,
+                fontFamily: 'var(--mono)',
                 color: data.auc > 0.7 ? 'var(--accent-green)' : data.auc > 0.55 ? 'var(--accent-amber)' : 'var(--text-3)',
             }}>
                 AUC = {data.auc.toFixed(3)}
             </div>
             <ResponsiveContainer width="100%" height={height}>
                 <LineChart data={chartData} margin={{ top: 12, right: 20, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(240,235,227,0.05)" />
                     <XAxis dataKey="fpr" type="number" domain={[0, 1]} tickCount={6}
                         tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                         label={{ value: 'False Positive Rate', fill: 'var(--text-3)', fontSize: 10, position: 'insideBottom', offset: -2 }} />
@@ -50,6 +52,9 @@ export default function RocCurve({ data, height = 260 }: Props) {
                         activeDot={{ r: 3, fill: '#8b5cf6' }} />
                 </LineChart>
             </ResponsiveContainer>
+            <div style={{ textAlign: 'center', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
+                Diagonal = random classifier baseline
+            </div>
         </div>
     )
 }

@@ -1,20 +1,11 @@
 // src/components/layout/SiteHeader.tsx
-// Top-of-page header with project title, external links, and Connect button.
-
 import { useState, useRef, useEffect } from 'react'
+import ProjectModal from '../shared/ProjectModal'
+import DatasetPopover from '../shared/DatasetPopover'
 
-const KAGGLE_URL = 'https://www.kaggle.com/datasets/abdurraziq01/cloud-computing-performance-metrics'
 const GITHUB_REPO = 'https://github.com/krantiyeole20/Cloud-Infra-Analytics-Cockpit'
 const GITHUB_PROFILE = 'https://github.com/krantiyeole20/'
 const LINKEDIN = 'https://www.linkedin.com/in/krantiyeole/'
-
-function KaggleIcon() {
-    return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-6.555 6.344 6.836 8.507c.095.104.117.208.07.315"/>
-        </svg>
-    )
-}
 
 function GithubIcon() {
     return (
@@ -34,12 +25,15 @@ function LinkedinIcon() {
 
 export default function SiteHeader() {
     const [connectOpen, setConnectOpen] = useState(false)
-    const dropRef = useRef<HTMLDivElement>(null)
+    const [datasetOpen, setDatasetOpen] = useState(false)
+    const [modalOpen, setModalOpen]     = useState(false)
+    const connectRef = useRef<HTMLDivElement>(null)
+    const datasetRef = useRef<HTMLDivElement>(null)
 
-    // Close dropdown on outside click
+    // Close Connect dropdown on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+            if (connectRef.current && !connectRef.current.contains(e.target as Node)) {
                 setConnectOpen(false)
             }
         }
@@ -48,69 +42,96 @@ export default function SiteHeader() {
     }, [])
 
     return (
-        <div className="site-header">
-            {/* Left: title + subtitle */}
-            <div className="site-header-brand">
-                <span className="site-header-icon">⚡</span>
-                <div>
-                    <div className="site-header-title">Cloud VM Intelligence Cockpit</div>
-                    <div className="site-header-sub">
-                        Energy-efficiency analytics · 2M VM records · 4 ML models
+        <>
+            <div className="site-header">
+                {/* Left: title + subtitle */}
+                <div className="site-header-brand">
+                    <span className="site-header-icon">⚡</span>
+                    <div>
+                        <div className="site-header-title">Cloud VM Intelligence Cockpit</div>
+                        <div className="site-header-sub">
+                            Energy-efficiency analytics · 2M VM records · 4 ML models
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Right: links */}
-            <nav className="site-header-nav">
-                <a
-                    href={KAGGLE_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="site-header-link"
-                    title="Dataset on Kaggle"
-                >
-                    <KaggleIcon />
-                    Dataset
-                </a>
-
-                <a
-                    href={GITHUB_REPO}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="site-header-link"
-                    title="Source code on GitHub"
-                >
-                    <GithubIcon />
-                    GitHub
-                </a>
-
-                {/* Connect dropdown */}
-                <div className="site-header-connect-wrap" ref={dropRef}>
+                {/* Right: links */}
+                <nav className="site-header-nav">
+                    {/* About — opens ProjectModal */}
                     <button
-                        className="site-header-connect-btn"
-                        onClick={() => setConnectOpen((o) => !o)}
+                        className="site-header-link"
+                        onClick={() => setModalOpen(true)}
+                        title="About this project — dataset, ML models, tech stack"
                     >
-                        Connect
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                            style={{ transform: connectOpen ? 'rotate(180deg)' : undefined, transition: 'transform .2s' }}>
-                            <path d="m6 9 6 6 6-6" />
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4M12 8h.01" />
                         </svg>
+                        About
                     </button>
 
-                    {connectOpen && (
-                        <div className="site-header-dropdown">
-                            <a href={GITHUB_PROFILE} target="_blank" rel="noreferrer" className="site-header-drop-item">
-                                <GithubIcon />
-                                GitHub Profile
-                            </a>
-                            <a href={LINKEDIN} target="_blank" rel="noreferrer" className="site-header-drop-item">
-                                <LinkedinIcon />
-                                LinkedIn
-                            </a>
-                        </div>
-                    )}
-                </div>
-            </nav>
-        </div>
+                    {/* Dataset — opens compact popover */}
+                    <div ref={datasetRef} style={{ position: 'relative' }}>
+                        <button
+                            className="site-header-link"
+                            onClick={() => setDatasetOpen(o => !o)}
+                            title="Dataset quick reference"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+                                <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+                            </svg>
+                            Dataset
+                        </button>
+                        <DatasetPopover
+                            open={datasetOpen}
+                            onClose={() => setDatasetOpen(false)}
+                        />
+                    </div>
+
+                    {/* GitHub repo */}
+                    <a
+                        href={GITHUB_REPO}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="site-header-link"
+                        title="Source code on GitHub"
+                    >
+                        <GithubIcon />
+                        GitHub
+                    </a>
+
+                    {/* Connect dropdown */}
+                    <div className="site-header-connect-wrap" ref={connectRef}>
+                        <button
+                            className="site-header-connect-btn"
+                            onClick={() => setConnectOpen((o) => !o)}
+                        >
+                            Connect
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                                style={{ transform: connectOpen ? 'rotate(180deg)' : undefined, transition: 'transform .2s' }}>
+                                <path d="m6 9 6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        {connectOpen && (
+                            <div className="site-header-dropdown">
+                                <a href={GITHUB_PROFILE} target="_blank" rel="noreferrer" className="site-header-drop-item">
+                                    <GithubIcon />
+                                    GitHub Profile
+                                </a>
+                                <a href={LINKEDIN} target="_blank" rel="noreferrer" className="site-header-drop-item">
+                                    <LinkedinIcon />
+                                    LinkedIn
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                </nav>
+            </div>
+
+            <ProjectModal open={modalOpen} onClose={() => setModalOpen(false)} />
+        </>
     )
 }

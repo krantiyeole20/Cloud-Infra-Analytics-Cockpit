@@ -1,18 +1,22 @@
-import React from 'react';
+import InfoTooltip from '../shared/InfoTooltip'
 
 interface Props {
-    label: string;
-    value: string | number;
-    unit?: string;
-    sub?: string;
-    color?: string;
-    delta?: number;
+    label: string
+    value: string | number
+    unit?: string
+    sub?: string
+    color?: string
+    delta?: number
+    tooltip?: string
 }
 
-export default function KpiCard({ label, value, unit, sub, color, delta }: Props) {
+export default function KpiCard({ label, value, unit, sub, color, delta, tooltip }: Props) {
     return (
         <div className={`kpi-card ${color ? color : ''}`}>
-            <div className="kpi-card-label">{label}</div>
+            <div className="kpi-card-label">
+                {label}
+                {tooltip && <InfoTooltip text={tooltip} />}
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                 <div className="kpi-card-value" style={{ color: color ? `var(--accent-${color})` : undefined }}>
                     {value}
@@ -32,5 +36,5 @@ export default function KpiCard({ label, value, unit, sub, color, delta }: Props
                 </div>
             )}
         </div>
-    );
+    )
 }

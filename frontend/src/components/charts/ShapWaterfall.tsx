@@ -23,6 +23,12 @@ export default function ShapWaterfall({ data, height = 240 }: Props) {
 
     return (
         <div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8, lineHeight: 1.5 }}>
+                Feature impact on anomaly score.{' '}
+                <span style={{ color: 'var(--accent-red)' }}>Red = pushes prediction up</span>
+                {' · '}
+                <span style={{ color: 'var(--accent-green)' }}>Green = pulls prediction down</span>
+            </div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 10, fontSize: 11, color: 'var(--text-3)' }}>
                 <span>Base: <strong style={{ color: 'var(--text-2)', fontFamily: 'var(--mono)' }}>{data.base_value.toFixed(4)}</strong></span>
                 <span>→</span>
@@ -34,7 +40,7 @@ export default function ShapWaterfall({ data, height = 240 }: Props) {
                     layout="vertical"
                     margin={{ top: 0, right: 16, left: 20, bottom: 0 }}
                 >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(240,235,227,0.05)" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                         tickFormatter={(v: number) => v.toFixed(3)} />
                     <YAxis type="category" dataKey="name" width={120}

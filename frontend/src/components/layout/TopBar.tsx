@@ -2,6 +2,7 @@
 import { useDashboardStore } from '../../store/dashboardStore'
 import { useRefresh } from '../../hooks/useRefresh'
 import { usePolling } from '../../hooks/usePolling'
+import { DEMO_STATUS_TEXT } from '../../constants/descriptions'
 
 function RefreshIcon({ spin }: { spin: boolean }) {
     return (
@@ -24,14 +25,21 @@ export default function TopBar() {
     usePolling(fetchKpis, { intervalMs: 30_000, immediate: false })
 
     const d = kpis.data
+    const isDemo = kpis.demo === true
+    const isLoading = kpis.loading || isRefreshing
 
     const effPct = d ? (d.avg_energy_efficiency * 100).toFixed(1) : '—'
     const pwrKw = d ? d.fleet_power_kw.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'
     const waste = d ? d.vms_wasting_energy_pct.toFixed(1) : '—'
     const recs = d ? (d.total_vm_records / 1_000_000).toFixed(2) + 'M' : '—'
 
-    const isDemo = (kpis as any).demo === true
-    const isLoading = kpis.loading || isRefreshing
+    const statusText = isLoading
+        ? 'Updating…'
+        : isDemo
+            ? DEMO_STATUS_TEXT
+            : lastRefreshedAt
+                ? `Refreshed ${lastRefreshedAt}`
+                : 'Live'
 
     return (
         <header className="topbar">
@@ -71,23 +79,22 @@ export default function TopBar() {
             {/* Actions */}
             <div className="topbar-actions">
                 {isDemo && (
-                    <span className="demo-badge" title="Backend offline — showing representative demo data">
-                        DEMO
+                    <span
+                        className="demo-badge"
+                        title={DEMO_STATUS_TEXT}
+                    >
+                        ⊙ Precomputed
                     </span>
                 )}
                 <div className="topbar-status">
                     <span className={`status-dot ${isLoading ? 'loading' : ''}`} />
-                    {isLoading
-                        ? 'Updating…'
-                        : lastRefreshedAt
-                            ? `Refreshed ${lastRefreshedAt}`
-                            : isDemo ? 'Demo mode' : 'Live'}
+                    {statusText}
                 </div>
                 <button
                     className={`btn-refresh ${isRefreshing ? 'spinning' : ''}`}
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    title="Regenerate synthetic data + retrain ML models"
+                    title="Simulate new telemetry — regenerates synthetic data and retrains ML models"
                 >
                     <RefreshIcon spin={isRefreshing} />
                     {isRefreshing ? 'Refreshing…' : 'Refresh'}
